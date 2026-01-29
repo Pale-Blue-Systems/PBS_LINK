@@ -1,0 +1,4 @@
+from .core import PBSLink
+
+__version__ = "0.1.1"
+__author__ = "Pale Blue Systems"
