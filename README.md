@@ -12,7 +12,7 @@ It allows any device—from a university rover to a commercial mining drill—to
 
 ---
 
-## 🚀 Features
+## Features
 
 * **PBS-ENV-01 Compliance:** Generates the standard 44-byte binary header required by PBS Gateways.
 * **Space-Grade Reliability:** Includes CRC32 Integrity Checks and Sequence Tracking (0-65535) to detect packet loss and radiation corruption.
@@ -21,7 +21,7 @@ It allows any device—from a university rover to a commercial mining drill—to
 
 ---
 
-## 📦 Installation
+## Installation
 
 This package is currently in **v0.1.1 Beta**. You can install it directly from the source:
 
@@ -33,7 +33,7 @@ pip install .
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Sending an Emergency Alert (Priority 0)
 Critical messages (P0) bypass all other traffic in the buffer.
@@ -61,7 +61,7 @@ link.send(priority=4, payload="Temp: -40C, Rad: 12mSv", ttl=60)
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 The PBS Ecosystem bridges the gap between simple local code and complex NASA Deep Space protocols.
 
@@ -75,7 +75,7 @@ The PBS Ecosystem bridges the gap between simple local code and complex NASA Dee
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 Detailed guides for system integrators and developers:
 
@@ -87,7 +87,7 @@ Detailed guides for system integrators and developers:
 
 ---
 
-## 📖 The Standard (PBS-ENV-01)
+## The Standard (PBS-ENV-01)
 
 This SDK implements the open **PBS-ENV-01 v1.3** specification. All fields are **Big-Endian**.
 
@@ -107,7 +107,7 @@ This SDK implements the open **PBS-ENV-01 v1.3** specification. All fields are *
 
 ---
 
-## 🛠️ Building Your Own Gateway
+## Building Your Own Gateway
 
 The PBS-ENV-01 standard is **Open Source**. You are encouraged to build your own implementations.
 
@@ -118,7 +118,7 @@ To be compliant, your custom Gateway must:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
 
