@@ -109,12 +109,18 @@ This SDK implements the open **PBS-ENV-01 v1.3** specification. All fields are *
 
 ## Building Your Own Gateway
 
-The PBS-ENV-01 standard is **Open Source**. You are encouraged to build your own implementations.
+The PBS-ENV-01 standard is **Open Source**, and `PBS-LINK` is merely the reference Python client. You are encouraged to build your own Gateway or Client implementations.
 
-To be compliant, your custom Gateway must:
-1.  Accept the 44-byte Header defined in `SPECIFICATION.md`.
-2.  Respect the `TTL` field (drop expired packets).
-3.  Map the `Priority` field to your underlying transport (e.g., TCP/IP or ION).
+### Compliance Requirements
+
+To ensure interoperability with the wider Pale Blue Systems network, your implementation must:
+
+1.  **Bit-Level Compliance:** Strict adherence to the [PBS-ENV-01 Specification](DOCS/SPECIFICATIONS.md).
+2.  **Behavioral Compliance:**
+    *   MUST drop packets with expired `TTL`.
+    *   MUST validate `CRC32` checksums before processing.
+    *   MUST NOT modify reserved fields.
+3.  **Conformance:** See `PBS-CONFORMANCE-01` in the [Open Standard Repository](https://github.com/pale-blue-systems/PBS-PROTOCOL-OPEN) for the official checklist.
 
 ---
 
