@@ -5,3 +5,12 @@ dist/
 *.egg-info/
 .DS_Store
 .pytest_cache/
+
+# Admin / Audit Artifacts
+implementation_plan.md
+audit_report*.md
+*_plan.md
+*_report.md
+.gemini/
+.vscode/
+.idea/

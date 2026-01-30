@@ -75,6 +75,18 @@ The PBS Ecosystem bridges the gap between simple local code and complex NASA Dee
 
 ---
 
+## 📚 Documentation
+
+Detailed guides for system integrators and developers:
+
+*   **[System Integration Guide](DOCS/INTEGRATION.md):**  
+    Deep dive into the **Data Pipeline**, **NASA DSN Compatibility**, and how data flows from your user application through the PBS Gateway to Earth.
+
+*   **[Specification (PBS-ENV-01)](DOCS/SPECIFICATIONS.md):**  
+    Byte-level breakdown of the binary header, including endianness, alignment, and CRC calculation.
+
+---
+
 ## 📖 The Standard (PBS-ENV-01)
 
 This SDK implements the open **PBS-ENV-01 v1.3** specification. All fields are **Big-Endian**.
