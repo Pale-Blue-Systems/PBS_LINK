@@ -103,8 +103,10 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 - No cryptographic authentication: neither the PBS-SEC-A-01 §7 extensions nor PBS-SEC-B-01.
 - No PBS-SVC-01 Service Intent, PBS-MUX-01 frames or BPv7 encapsulation.
 - Source ID truncation is byte-based. A multi-byte UTF-8 character that crosses byte 16 is cut and leaves invalid UTF-8 in the field; `parse()` decodes it with replacement characters. Source IDs of at most 16 ASCII characters avoid this.
+- The sequence counter belongs to one `PBSLink` instance and is held in memory only. The first envelope from each new instance carries sequence 1. A process restart, or two instances with the same `device_id`, therefore breaks the per-source monotonic sequence that PBS-ENV-01 §8 and PBS-CONFORMANCE-01 §7 require, and a receiver that tracks sequence numbers reports false gaps or duplicates. Use one `PBSLink` instance per Source ID. To continue the sequence after a restart, store the last sequence number sent and assign it to `link.sequence` before the first `send()`; the next envelope carries that value plus 1, modulo 65,536.
 - `receive()` reads unframed envelopes only. With `use_framing=True` it raises `PBSMagicError` on the first byte of a COBS frame. To receive a framed stream, split it at 0x00 delimiters and pass each frame, including its delimiter, to `parse()`.
-- Defect: `COBSFraming.encode()` drops a 0x00 byte that directly follows a run of 254 non-zero bytes. The decoded envelope is one payload byte short, and `parse()` raises `PBSValidationError` ("Incomplete payload"). Unframed transport is not affected.
+- `parse()` checks payload length (step 6) before TTL (step 7); PBS-ENV-01 §14 orders TTL validation before payload extraction. An expired envelope with a short payload therefore raises `PBSValidationError` instead of `PBSTTLError`. Both exceptions reject the envelope.
+- Defect: `COBSFraming.encode()` drops a 0x00 byte that follows a run of non-zero bytes whose length is a multiple of 254 (254, 508, 762, ...), counted from the previous 0x00 or from the start of the envelope. Each dropped byte shortens the decoded envelope by one byte, and `parse()` raises `PBSValidationError` ("Incomplete payload"). Unframed transport is not affected.
 
 ---
 

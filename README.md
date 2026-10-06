@@ -36,12 +36,12 @@ Pale Blue Systems publishes PBS_LINK for a future in which space agencies, comme
 - **Priority:** classes 0 (CRITICAL) to 4 (BULK) of PBS-PRIO-01. `send()` rejects other values; `parse()` rejects 5–255 by default.
 - **Lifetime:** TTL in seconds (u32); 0 means the envelope never expires. `parse(check_ttl=True)` rejects expired envelopes.
 - **Timestamp:** Unix microseconds from `time.time()` or a caller-supplied clock.
-- **Validation:** `parse()` checks Magic, CRC-32, priority, payload length and, optionally, TTL. Each failure raises a specific exception.
+- **Validation:** `parse()` checks length, Magic, CRC-32, priority, payload length and, optionally, TTL. Magic, CRC-32, priority and TTL failures raise `PBSMagicError`, `PBSCRCError`, `PBSPriorityError` and `PBSTTLError`; length failures raise their base class, `PBSValidationError`.
 - **Framing:** optional COBS framing (`use_framing=True`) with a 0x00 frame delimiter for byte-stream links.
 - **Resynchronization:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
 - **Dependencies:** none outside the Python standard library.
 
-[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-011) lists the limitations of 0.1.1, including a COBS encoder defect at 254-byte runs.
+[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-011) lists the limitations of 0.1.1, including the per-instance sequence counter and a COBS encoder defect that drops a 0x00 following a non-zero run whose length is a multiple of 254 bytes.
 
 ---
 
