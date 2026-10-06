@@ -129,7 +129,7 @@ python EXAMPLES/rover_alert.py
 python TESTS/doc_examples.py README.md DOCS/INTEGRATION.md DOCS/SPECIFICATIONS.md
 ```
 
-`pytest -q TESTS` runs the 55 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
+`pytest -q TESTS` runs the 55 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.8, 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
 
 ---
 
