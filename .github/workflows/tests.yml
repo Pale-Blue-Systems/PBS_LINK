@@ -9,11 +9,27 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        include:
+          # setup.py declares python_requires >= 3.8. actions/python-versions
+          # publishes Linux x64 builds of 3.8.18 and 3.9.25 for Ubuntu 22.04
+          # and 24.04, and none for Ubuntu 26.04. ubuntu-latest moves to the
+          # newest GA runner image (actions/runner-images README, "Label
+          # scheme"), so 3.8 and 3.9 are pinned to ubuntu-24.04.
+          - os: ubuntu-24.04
+            python-version: "3.8"
+          - os: ubuntu-24.04
+            python-version: "3.9"
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
