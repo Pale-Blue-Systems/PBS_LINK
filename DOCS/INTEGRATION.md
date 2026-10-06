@@ -2,7 +2,7 @@
 
 **Applies to:** PBS_LINK 0.1.1 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
 
-This guide defines the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 lists the requirements a PBS gateway meets, by reference to the PBS specifications.
+This guide describes the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 restates, by reference to the PBS specifications, the requirements that apply to a conformant PBS gateway.
 
 No PBS gateway implementation is published. [PBS-EDGE-ADAPTER-MV](https://github.com/Pale-Blue-Systems/PBS-EDGE-ADAPTER-MV) contains a worked example that encodes one PBS envelope as the payload block of a BPv7 bundle; it does not schedule, store or forward traffic.
 
@@ -20,6 +20,9 @@ PBS specifications are published in [PBS-PROTOCOL-OPEN/PBS-RFC-LIB](https://gith
 | [PBS-CONFORMANCE-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-CONFORMANCE-01.md) | Conformance, Interoperability, and Mandatory Baselines | 1.3 |
 | [PBS-DTN-MAP-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-DTN-MAP-01.md) | Mapping to Delay/Disruption Tolerant Networking (DTN) | 1.3 |
 | [PBS-DTN-MAP-02](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-DTN-MAP-02.md) | Mapping to BPv7 Delay/Disruption Tolerant Networking | 1.4 |
+| [PBS-SVC-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-SVC-01.md) | Mission Service Intent | 1.4 |
+| [PBS-SEC-B-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-SEC-B-01.md) | Authenticated Mission Messaging | 1.4 |
+| [PBS-MUX-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-MUX-01.md) | Payload Multiplexing and Semantic Framing | 1.4 |
 | [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171) | Bundle Protocol Version 7 (IETF, January 2022) | — |
 
 ---
@@ -116,7 +119,7 @@ The examples run as written, in order, in one interpreter session against the in
 
 ### 4.1 Periodic Telemetry
 
-TTL bounds how long a stale sample occupies gateway storage. A gateway discards the envelope once more than TTL seconds have elapsed since its Timestamp (PBS-ENV-01 §12.2), regardless of priority (PBS-PRIO-01 §7). Consecutive sequence numbers let the receiver detect lost envelopes (PBS-ENV-01 §8).
+PBS-ENV-01 §12.1 and §12.2 require a gateway to discard an envelope once more than TTL seconds have elapsed since its Timestamp, regardless of priority (PBS-PRIO-01 §7). TTL therefore bounds how long a stale sample occupies the storage of a conformant gateway. Consecutive sequence numbers let the receiver detect lost envelopes (PBS-ENV-01 §8).
 
 ```python
 import time
@@ -143,7 +146,7 @@ assert alert[0x01] == 0 and alert[0x02] == 0x01  # Priority byte, Flags byte
 
 ### 4.3 Bulk Data Segmentation
 
-PBS-ENV-01 §16.3 directs bulk transfers to be segmented into multiple envelopes and recommends 1–4 KB payloads for memory-constrained embedded devices. PBS_LINK does not segment. The application defines the segment format; the example below carries no reassembly metadata, which a real transfer adds (for example object identifier, byte offset and total length).
+PBS-ENV-01 §16.3 recommends segmenting bulk transfers into multiple envelopes and 1–4 KB payloads for memory-constrained embedded devices. PBS_LINK does not segment. The application defines the segment format; the example below carries no reassembly metadata, which a real transfer adds (for example object identifier, byte offset and total length).
 
 ```python
 image = bytes(range(256)) * 40  # stand-in for a 10,240-byte image
@@ -222,9 +225,12 @@ PBS Core conformance requires every MUST and MUST NOT in the PBS Core specificat
 |-------------|--------|
 | Higher-priority envelopes SHOULD receive preferential storage. Lower-priority envelopes MAY be discarded when storage is exhausted. TTL expiry applies regardless of priority. | PBS-PRIO-01 §7 |
 | Receivers MUST check TTL on receipt, before forwarding stored envelopes, and periodically for stored envelopes awaiting transmission. | PBS-ENV-01 §12.2 |
-| Expiry is checked either from Timestamp (RECOMMENDED; TTL unchanged) or by decrementing TTL at each hop (CRC-32 recomputed). | PBS-ENV-01 §12.3 |
-| Gateways MUST verify the CRC-32 before forwarding, MUST preserve all header fields except TTL, and MUST recompute the CRC-32 after modifying TTL. | PBS-ENV-01 §15; PBS-CONFORMANCE-01 §8 |
-| Relays MUST NOT modify Priority, Flags, Sequence, Source ID, Timestamp or Size. | PBS-CONFORMANCE-01 §8 |
+| Implementations MAY use either expiry method: timestamp-based (RECOMMENDED; TTL unchanged) or decrement-based (TTL reduced by the storage duration at each hop, envelope discarded when the result is ≤ 0, CRC-32 recomputed). | PBS-ENV-01 §12.3 |
+| Gateways and relays MUST verify the CRC-32 before forwarding, MUST decrement TTL appropriately during store-and-forward, MUST discard expired envelopes, MUST preserve all header fields except TTL, and MUST recompute the CRC-32 after modifying TTL. | PBS-ENV-01 §15; PBS-CONFORMANCE-01 §8 |
+| Relays MUST NOT forward envelopes with an invalid CRC-32. | PBS-SEC-A-01 §5 |
+| Relays MUST NOT modify Priority, Flags, Sequence, Source ID, Timestamp or Size, and MUST NOT forward envelopes with invalid structure. | PBS-CONFORMANCE-01 §8 |
+
+PBS-ENV-01 §12.3 marks the timestamp-based method, which leaves TTL unchanged, RECOMMENDED. PBS-ENV-01 §15 and PBS-CONFORMANCE-01 §8 state that gateways MUST decrement TTL appropriately. Neither specification states how the two clauses apply to a gateway that uses the timestamp-based method.
 
 ### 5.4 BPv7 Encapsulation
 
@@ -238,13 +244,14 @@ PBS-DTN-MAP-01 (v1.3, status "Optional (Interoperability)") and PBS-DTN-MAP-02 (
 | Endpoint IDs | Source ID to EID mapping MUST be deterministic within a gateway; the destination EID is configured at the gateway (§8) | The mapping SHALL be deterministic, stable for the mission transaction and SHALL preserve authority scope (§3) |
 | Lifetime | TTL seconds converted to bundle lifetime (§6.1); DTN lifetime expiry MUST result in envelope discard (§7.3) | Bundle lifetime SHALL be selected so that network delivery cannot extend the message beyond its deadline or expiry; for a finite limit the adapter SHALL bound it by the interval remaining at bundle creation (§4) |
 | Priority | Priority classes SHALL map to class of service: Critical and High to Expedited, Normal to Normal, Bulk to Bulk (§6.3) | Priority is preserved unchanged; the mapping profile SHALL document the BP QoS mechanism, queue treatment, congestion behavior and unavailable-treatment behavior (§5) |
-| Inbound | DTN-layer validation first; the envelope is extracted verbatim and not modified (§7.1, §7.2) | — |
+| Inbound | DTN-layer validation first; the envelope is extracted verbatim and not modified (§7.1, §7.2) | PBS application acceptance SHALL evaluate PBS freshness independently of BP delivery status (§4); translation of a BP status event into a PBS service-status result SHALL keep network status, PBS receipt, application acceptance and transaction result distinct (§9) |
 | Security | BPSec MAY be added and does not replace the PBS CRC-32 (§6.4) | BPSec SHALL be applied when the network-security profile requires it (§7) |
 
 Notes for implementers:
 
 - PBS-DTN-MAP-01 §6.3 assigns no class of service to LOW (3).
 - RFC 9171 defines no class-of-service field in BPv7. The bundle processing control flags (§4.2.3) include no class-of-service flag, and the IANA registry in §9.3 marks the class-of-service priority bits 7–8 as Bundle Protocol version 6 only. A gateway that implements the PBS-DTN-MAP-01 §6.3 table over BPv7 therefore conveys or applies class of service by a mechanism outside the primary block. PBS-DTN-MAP-02 §5 requires the mapping profile to document that mechanism.
+- PBS-DTN-MAP-01 §6.1 converts TTL seconds to bundle lifetime. BPv7 lifetime counts from bundle creation (RFC 9171 §4.3.1); PBS expiry counts from Timestamp (PBS-ENV-01 §12.2). A lifetime of TTL × 1000 ms therefore exceeds the PBS-DTN-MAP-02 §4 bound by the envelope's age at bundle creation: 5,000 ms in the example of section 5.4.1. PBS-DTN-MAP-02 §4 requires the section 5.4.1 bound.
 - Neither document specifies the bundle lifetime for TTL 0 (no expiry).
 
 Example Source ID to EID mapping, with the illustrative values of PBS-DTN-MAP-01 §8:
@@ -263,13 +270,17 @@ RFC 9171 expresses bundle creation time as DTN time, in milliseconds since 2000-
 lifetime_ms <= (Timestamp_us / 1000 + TTL_s * 1000) - 946_684_800_000 - creation_dtn_ms
 ```
 
-946,684,800 s is the Unix time of the DTN epoch. A negative bound means the envelope had expired before bundle creation; the gateway discards it (PBS-ENV-01 §12.2).
+946,684,800 s is the Unix time of the DTN epoch. A negative bound means the envelope expired before bundle creation; PBS-ENV-01 §12.1 requires the gateway to discard it.
+
+The bound requires a known bundle creation time. DTN time 0 means that the time is unknown (RFC 9171 §4.2.6), and RFC 9171 §4.2.7 recommends creation time 0 for nodes that lack accurate clocks. With creation time 0, the bound is computed from the gateway clock at bundle creation, `lifetime_ms <= Timestamp_us / 1000 + TTL_s * 1000 - now_unix_ms`, and the bundle MUST carry exactly one Bundle Age block (RFC 9171 §4.4.2).
 
 ```python
 DTN_EPOCH_UNIX_MS = 946_684_800_000  # 2000-01-01T00:00:00Z in Unix milliseconds
 
 def max_bundle_lifetime_ms(timestamp_us: int, ttl_s: int, creation_dtn_ms: int) -> int:
     """PBS-DTN-MAP-02 section 4 lifetime bound for an envelope with TTL > 0."""
+    if creation_dtn_ms == 0:
+        raise ValueError("creation time unknown (RFC 9171 4.2.6); bound from the gateway clock")
     expiry_dtn_ms = timestamp_us // 1000 + ttl_s * 1000 - DTN_EPOCH_UNIX_MS
     return expiry_dtn_ms - creation_dtn_ms
 
@@ -280,4 +291,4 @@ assert max_bundle_lifetime_ms(1_767_225_600_000_000, 60, created) == 55_000
 
 ### 5.5 NASA Deep Space Network
 
-PBS-PRIO-01 §14 is informative. It distinguishes DSN antenna scheduling (ground-scheduled, hours to days ahead) from PBS packet scheduling within an allocated link, and gives a non-normative table relating DSN scheduling priority levels 1–7 to PBS classes 0–4. PBS priority values remain as defined in PBS-PRIO-01 §4.
+PBS-PRIO-01 §14 distinguishes DSN antenna scheduling (ground-scheduled, hours to days ahead) from PBS packet scheduling within an allocated link. Its §14.2 table relating DSN scheduling priority levels 1–7 to PBS classes 0–4 is informative, and implementations MAY define mission-specific mappings. PBS priority values MUST remain as defined in PBS-PRIO-01 §4 (§14.2).
