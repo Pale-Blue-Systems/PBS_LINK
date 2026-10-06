@@ -5,14 +5,14 @@
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
-PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN)). It builds and parses envelopes, optionally frames them with COBS, and writes them to and reads them from a serial port object.
+PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.5 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN), PBS v1.5.0). It builds and parses envelopes, optionally frames them with COBS, writes them to a serial port object, and reads them from it with the PBS-ENV-01 validation and expiry checks.
 
 | Item | Value |
 |------|-------|
 | Version | 0.1.3 (Beta) |
 | pip distribution name | `pbs-link` |
 | Import package | `PBS_LINK` |
-| Implements | PBS-ENV-01 v1.3 |
+| Implements | PBS-ENV-01 v1.5 |
 | Python | 3.8 or later |
 | Dependencies | Python standard library only |
 
@@ -30,13 +30,13 @@ The Pale Blue Systems Foundation publishes PBS_LINK for planned architectures in
 
 ## Features
 
-- **Envelope:** PBS-ENV-01 v1.3 fixed 44-byte big-endian header followed by the payload.
+- **Envelope:** PBS-ENV-01 v1.5 fixed 44-byte big-endian header followed by the payload. The header layout is unchanged since v1.3.
 - **Header integrity:** IEEE 802.3 CRC-32 over all 44 header bytes with the CRC field (0x28–0x2B) set to zero. The CRC does not cover the payload.
 - **Loss detection:** 16-bit sequence number per `PBSLink` instance, incremented on each `send()` under a lock; wraps from 65535 to 0.
 - **Priority:** classes 0 (CRITICAL) to 4 (BULK) of PBS-PRIO-01. `send()` rejects other values; `parse()` rejects 5–255 by default.
-- **Lifetime:** TTL in seconds (u32); 0 means the envelope never expires. `parse(check_ttl=True)` rejects expired envelopes.
+- **Lifetime:** TTL in seconds (u32); 0 means the envelope never expires. `receive()` checks expiry on receipt (PBS-ENV-01 §12.2) and raises `PBSTTLError` for an expired envelope; `receive(check_ttl=False)` skips the check. `parse(check_ttl=True)` applies the same check. The check reads the receiver's `clock_source`.
 - **Timestamp:** Unix microseconds from `time.time()` or a caller-supplied clock.
-- **Validation:** `parse()` checks length, Magic, CRC-32, priority, payload length and, optionally, TTL. Magic, CRC-32, priority and TTL failures raise `PBSMagicError`, `PBSCRCError`, `PBSPriorityError` and `PBSTTLError`; length failures raise their base class, `PBSValidationError`.
+- **Validation:** `parse()` checks length, Magic, CRC-32, priority, payload length and, optionally, TTL; `receive()` applies the same checks, TTL included. Magic, CRC-32, priority and TTL failures raise `PBSMagicError`, `PBSCRCError`, `PBSPriorityError` and `PBSTTLError`; length failures raise their base class, `PBSValidationError`.
 - **Framing:** optional COBS framing (`use_framing=True`) with a 0x00 frame delimiter for byte-stream links; `send()` writes frames and `receive()` reads, decodes and validates them.
 - **Resynchronization:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
 - **Dependencies:** none outside the Python standard library.
@@ -140,7 +140,7 @@ python TESTS/doc_examples.py README.md DOCS/INTEGRATION.md DOCS/SPECIFICATIONS.m
 
 No PBS gateway implementation is published. The PBS specifications assign these functions to a gateway:
 
-3. **Validation, scheduling and storage.** Validate each envelope (PBS-ENV-01 §14), forward by priority (PBS-PRIO-01 §6), store through link outages (PBS-PRIO-01 §7) and discard expired envelopes (PBS-ENV-01 §12).
+3. **Validation, scheduling and storage.** Validate each envelope (PBS-ENV-01 §14), forward by priority (PBS-PRIO-01 §6), store through link outages (PBS-PRIO-01 §7), discard expired envelopes (PBS-ENV-01 §12.2) and forward the 44 header bytes as received, TTL included (PBS-ENV-01 §15).
 4. **DTN boundary.** Encapsulate each envelope in a Bundle Protocol Version 7 bundle ([RFC 9171](https://www.rfc-editor.org/rfc/rfc9171)) as specified by PBS-DTN-MAP-01 or PBS-DTN-MAP-02.
 
 ---
@@ -153,7 +153,7 @@ No PBS gateway implementation is published. The PBS specifications assign these 
 
 ---
 
-## The Standard (PBS-ENV-01 v1.3)
+## The Standard (PBS-ENV-01 v1.5)
 
 All multi-byte fields are big-endian.
 
@@ -171,17 +171,17 @@ All multi-byte fields are big-endian.
 | 0x24 | TTL | `u32` | Time-to-live, seconds; `0` = never expires |
 | 0x28 | CRC32 | `u32` | CRC-32 of bytes 0x00–0x2B with 0x28–0x2B set to zero |
 
-[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md) gives the CRC-32 parameters and a test vector. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.3 as corrected by the PBS v1.4.1 errata (2026-10-06).
+[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md) gives the CRC-32 parameters and a test vector. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.5 (PBS v1.5.0, 2026-10-06).
 
 ---
 
 ## Conformance
 
-[PBS-CONFORMANCE-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-CONFORMANCE-01.md) §2 defines a PBS Core conformant implementation as one that satisfies every MUST and MUST NOT in the PBS Core specifications. Four specifications carry Status Core: PBS-ENV-01 v1.3, PBS-PRIO-01 v1.4 and PBS-SEC-A-01 v1.3, which PBS-CONFORMANCE-01 §3 lists as mandatory, and PBS-CONFORMANCE-01 v1.3 itself, whose §4–§9 and §12 state further MUST requirements, such as "Apply priority to scheduling decisions" (§6). Requirements on receivers and relays include:
+[PBS-CONFORMANCE-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-CONFORMANCE-01.md) §2 defines a PBS Core conformant implementation as one that satisfies every MUST and MUST NOT in the PBS Core specifications. Four specifications carry Status Core: PBS-ENV-01 v1.5, PBS-PRIO-01 v1.4 and PBS-SEC-A-01 v1.5, which PBS-CONFORMANCE-01 §3 lists as mandatory, and PBS-CONFORMANCE-01 v1.5 itself, whose §4–§9 and §12 state further MUST requirements, such as "Apply priority to scheduling decisions" (§6). Requirements on receivers and relays include:
 
 - Verify Magic `0x10`, the CRC-32, priority 0–4 and TTL before processing; discard on failure (§4.2, §9).
-- Recompute the CRC-32 after modifying TTL (§5.2).
-- Do not modify Priority, Flags, Sequence, Source ID, Timestamp or Size when relaying (§8).
+- Forward the 44 header bytes unchanged, TTL and CRC-32 included, when relaying (§5.2, §8).
+- Do not modify any header field when relaying, and do not discard an envelope with TTL 0 as TTL-expired (§8).
 
 ---
 

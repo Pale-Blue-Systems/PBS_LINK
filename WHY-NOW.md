@@ -1,6 +1,6 @@
 # Why Now: Context for PBS_LINK
 
-PBS_LINK is the Python reference SDK for the PBS-ENV-01 v1.3 message envelope. The envelope is a fixed, binary, transport-agnostic container: a 44-byte header that identifies the source and carries priority, timestamp, lifetime (TTL), sequence number and a header CRC-32, followed by the payload (PBS-ENV-01 §1, §2, §4).
+PBS_LINK is the Python reference SDK for the PBS-ENV-01 v1.5 message envelope. The envelope is a fixed, binary, transport-agnostic container: a 44-byte header that identifies the source and carries priority, timestamp, lifetime (TTL), sequence number and a header CRC-32, followed by the payload (PBS-ENV-01 §1, §2, §4).
 
 No current networking failure drives this work. The motivation is the number and diversity of communication paths in planned space architectures.
 
