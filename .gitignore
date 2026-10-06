@@ -14,3 +14,4 @@ audit_report*.md
 .gemini/
 .vscode/
 .idea/
+.venv/
