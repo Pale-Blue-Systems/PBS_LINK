@@ -24,7 +24,7 @@ PBS_LINK is an endpoint library. It does not schedule, store, retransmit or forw
 
 ## Context
 
-Pale Blue Systems publishes PBS_LINK for a future in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. It does not respond to a current operational failure. It supports experimentation, integration and interoperability testing with an open, inspectable envelope format before connectivity conventions become fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
+Pale Blue Systems publishes PBS_LINK for planned architectures in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. No current operational failure motivates it. It provides a published envelope implementation for experimentation, integration and interoperability testing before connectivity conventions are fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
 
 ---
 
@@ -81,7 +81,7 @@ PBS_LINK does not buffer or reorder envelopes. Forwarding order is a gateway fun
 ### 2. Bulk Science Data (Priority 4)
 
 ```python
-# BULK: a gateway discards it once more than 60 s have elapsed since its Timestamp.
+# BULK: PBS-ENV-01 §12.1 requires a gateway to discard it once more than 60 s have elapsed since its Timestamp.
 telemetry = link.send(priority=Priority.BULK, payload="Temp: -40C, Rad: 12mSv", ttl=60)
 ```
 
@@ -177,9 +177,7 @@ All multi-byte fields are big-endian.
 
 ## Conformance
 
-PBS-ENV-01 is part of the PBS Open Standard. Independent client and gateway implementations are welcome.
-
-[PBS-CONFORMANCE-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-CONFORMANCE-01.md) defines conformance. An implementation is PBS Core conformant when it satisfies every MUST and MUST NOT of PBS-ENV-01, PBS-PRIO-01 and PBS-SEC-A-01 (§2, §3). Requirements on receivers and relays include:
+[PBS-CONFORMANCE-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-CONFORMANCE-01.md) §2 defines a PBS Core conformant implementation as one that satisfies every MUST and MUST NOT in the PBS Core specifications. Four specifications carry Status Core: PBS-ENV-01 v1.3, PBS-PRIO-01 v1.4 and PBS-SEC-A-01 v1.3, which PBS-CONFORMANCE-01 §3 lists as mandatory, and PBS-CONFORMANCE-01 v1.3 itself, whose §4–§9 and §12 state further MUST requirements, such as "Apply priority to scheduling decisions" (§6). Requirements on receivers and relays include:
 
 - Verify Magic `0x10`, the CRC-32, priority 0–4 and TTL before processing; discard on failure (§4.2, §9).
 - Recompute the CRC-32 after modifying TTL (§5.2).
