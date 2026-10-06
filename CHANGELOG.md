@@ -2,6 +2,21 @@
 
 All notable changes to PBS_LINK (pip distribution `pbs-link`, import package `PBS_LINK`) are recorded here. Versions follow semantic versioning.
 
+## [0.1.3] - 2026-10-06
+
+### Fixed
+
+- `receive()` with `use_framing=True` read the stream as an unframed header and raised `PBSMagicError` on the first byte of every COBS frame. It now reads to the 0x00 delimiter, decodes the frame and validates the envelope. Bytes past the delimiter and partial frames are kept for the next call; empty frames are skipped; a frame that fails decoding or validation raises and is consumed, so the next call reads the next frame; a stream with no delimiter within the longest valid frame raises `PBSFramingError` and resynchronizes at the next delimiter. A decoded frame longer or shorter than 44 bytes plus Size raises `PBSValidationError`.
+- `receive()` restores the port's `timeout` attribute when a read raises.
+
+### Changed
+
+- README, `DOCS/INTEGRATION.md` §3.3, §3.4 and §4.5, and `WHY-NOW.md` describe framed receive and the 67-test suite.
+
+### Added
+
+- `TESTS/test_torture.py::TestFramedReceive`: 11 tests covering single and consecutive frames, empty frames, partial frames across timeouts, timeout restoration, corrupted and undecodable frames followed by a good frame, an overlong frame, a length mismatch, a payload above `max_payload_size`, and the unchanged unframed path.
+
 ## [0.1.2] - 2026-10-06
 
 ### Fixed

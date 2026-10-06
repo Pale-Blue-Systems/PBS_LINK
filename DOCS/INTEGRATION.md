@@ -1,6 +1,6 @@
 # PBS_LINK System Integration Guide
 
-**Applies to:** PBS_LINK 0.1.2 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
+**Applies to:** PBS_LINK 0.1.3 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
 
 This guide describes the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 restates, by reference to the PBS specifications, the requirements that apply to a conformant PBS gateway.
 
@@ -34,7 +34,7 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
                                 (optional COBS)                                  (not published)
 ```
 
-| Function | PBS_LINK 0.1.2 | PBS gateway (requirement source) |
+| Function | PBS_LINK 0.1.3 | PBS gateway (requirement source) |
 |----------|----------------|----------------------------------|
 | Build envelope (44-byte header + payload) | `send()`, `build_envelope()` | — |
 | Header CRC-32 | Computed on send; verified by `parse()` | Verify before processing and before forwarding (PBS-ENV-01 §13, §15) |
@@ -93,11 +93,13 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 
 ### 3.3 Reading a Serial Port: `receive()` and `find_sync()`
 
-`receive(timeout=None)` reads 44 bytes from `serial_port`, checks Magic, rejects a Size larger than `max_payload_size` with `PBSValidationError`, reads Size payload bytes, and calls `parse()`. It returns `None` when a read returns fewer bytes than requested. If the port object has a `timeout` attribute, `receive()` applies `timeout` to the header read only and then restores the previous value.
+Unframed (`use_framing=False`), `receive(timeout=None)` reads 44 bytes from `serial_port`, checks Magic, rejects a Size larger than `max_payload_size` with `PBSValidationError`, reads Size payload bytes, and calls `parse()`. It returns `None` when a read returns fewer bytes than requested. If the port object has a `timeout` attribute, `receive()` applies `timeout` to the header read only and then restores the previous value.
+
+Framed (`use_framing=True`), `receive()` reads from `serial_port` until a 0x00 delimiter, COBS-decodes the frame and parses it. It reads the bytes the port reports in `in_waiting`, at least one per read. Bytes read past the delimiter are kept for the next call. When a read returns no bytes, `receive()` returns `None` and keeps any partial frame for the next call. Empty frames (consecutive 0x00 bytes) are skipped. A frame that fails COBS decoding raises `PBSFramingError`; a frame that fails validation raises the `parse()` exception, and a frame whose decoded length differs from 44 bytes plus Size raises `PBSValidationError`. The frame is consumed in each case, so the next call continues with the next frame. A stream with no delimiter within the longest valid encoded frame (44 bytes plus `max_payload_size`, plus COBS overhead) raises `PBSFramingError` once; bytes up to the next delimiter are then discarded. If the port has a `timeout` attribute, `receive()` applies `timeout` for the whole call and restores the previous value.
 
 `find_sync(data)` returns `(offset, data[offset:])` for the first offset at which byte 0x10 starts a 44-byte header with a valid CRC-32, or `(-1, data)` if there is none. It restores envelope alignment in an unframed byte stream after data loss.
 
-### 3.4 Limitations of PBS_LINK 0.1.2
+### 3.4 Limitations of PBS_LINK 0.1.3
 
 - No scheduling, queuing, preemption, storage or retransmission.
 - `require_ack=True` sets Flags bit 0 (0x01). PBS_LINK does not wait for, match or retransmit on acknowledgements.
@@ -107,7 +109,6 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 - No PBS-SVC-01 Service Intent, PBS-MUX-01 frames or BPv7 encapsulation.
 - Source ID truncation is byte-based. A multi-byte UTF-8 character that crosses byte 16 is cut and leaves invalid UTF-8 in the field; `parse()` decodes it with replacement characters. Source IDs of at most 16 ASCII characters avoid this.
 - The sequence counter belongs to one `PBSLink` instance and is held in memory only. The first envelope from each new instance carries sequence 1. A process restart, or two instances with the same `device_id`, therefore breaks the per-source monotonic sequence that PBS-ENV-01 §8 and PBS-CONFORMANCE-01 §7 require, and a receiver that tracks sequence numbers reports false gaps or duplicates. Use one `PBSLink` instance per Source ID. To continue the sequence after a restart, store the last sequence number sent and assign it to `link.sequence` before the first `send()`; the next envelope carries that value plus 1, modulo 65,536.
-- `receive()` reads unframed envelopes only. With `use_framing=True` it raises `PBSMagicError` on the first byte of a COBS frame. To receive a framed stream, split it at 0x00 delimiters and pass each frame, including its delimiter, to `parse()`.
 - `parse()` checks payload length (step 6) before TTL (step 7); PBS-ENV-01 §14 orders TTL validation before payload extraction. An expired envelope with a short payload therefore raises `PBSValidationError` instead of `PBSTTLError`. Both exceptions reject the envelope.
 
 ---
@@ -189,6 +190,10 @@ assert written == len(frame) and frame[-1] == 0x00 and 0x00 not in frame[:-1]
 
 env = tx.parse(frame)  # parse() decodes COBS when use_framing=True
 assert env.payload == b"MODE: SAFE"
+
+rx = PBSLink(device_id="Ground", serial_port=io.BytesIO(frame), use_framing=True)
+env = rx.receive()  # reads to the 0x00 delimiter, decodes and validates
+assert env.payload == b"MODE: SAFE" and env.source_id == "Rover-Alpha"
 ```
 
 ---

@@ -1,5 +1,5 @@
 """
-Pale Blue Systems - Reference SDK (v0.1.2 Beta)
+Pale Blue Systems - Reference SDK (v0.1.3 Beta)
 Implements: PBS-ENV-01 v1.3 (44-Byte Header)
 License: Apache 2.0
 Copyright 2026 Pale Blue Systems Foundation
@@ -282,6 +282,7 @@ class PBSLink:
         self._sequence = 0
         self._sequence_lock = threading.Lock()
         self._receive_buffer = bytearray()
+        self._discard_to_delimiter = False
 
     def _get_next_sequence(self) -> int:
         """Thread-safe sequence number generation"""
@@ -411,6 +412,23 @@ class PBSLink:
             except PBSFramingError:
                 pass  # Try parsing anyway
 
+        return self._parse_unframed(
+            data,
+            validate_crc=validate_crc,
+            validate_priority=validate_priority,
+            check_ttl=check_ttl,
+            current_time=current_time,
+        )
+
+    def _parse_unframed(
+        self,
+        data: bytes,
+        validate_crc: bool = True,
+        validate_priority: bool = True,
+        check_ttl: bool = False,
+        current_time: Optional[float] = None
+    ) -> PBSEnvelope:
+        """Parse an envelope that carries no COBS framing."""
         if len(data) < HEADER_SIZE:
             raise PBSValidationError(f"Data too short: {len(data)} bytes, need at least {HEADER_SIZE}")
 
@@ -466,58 +484,141 @@ class PBSLink:
 
     def receive(self, timeout: Optional[float] = None) -> Optional[PBSEnvelope]:
         """
-        Receive and parse a PBS envelope from serial port.
+        Receive and parse one PBS envelope from serial_port.
+
+        Unframed (use_framing=False): reads the 44-byte header, checks Magic
+        and Size, reads Size payload bytes and parses the envelope.
+
+        Framed (use_framing=True): reads until a 0x00 delimiter, COBS-decodes
+        the frame and parses it. Bytes read past the delimiter, and a partial
+        frame left by a timeout, are kept for the next call. Empty frames
+        (consecutive delimiters) are skipped. A frame that fails decoding or
+        validation raises; the next call continues with the next frame.
 
         Args:
-            timeout: Read timeout in seconds (None = blocking)
+            timeout: Read timeout in seconds (None = blocking). Applied to the
+                     port's timeout attribute, if it has one, for the duration
+                     of the call (unframed: the header read only).
 
         Returns:
-            PBSEnvelope if successful, None if timeout or incomplete
+            PBSEnvelope, or None when a read returns fewer bytes than needed
+            (timeout or end of stream).
 
         Raises:
             PBSSerialError: Serial read failed
+            PBSFramingError: COBS decoding failed, or no delimiter arrived
+                             within the maximum frame length
             PBSValidationError: Received data failed validation
         """
         if not self.serial_port:
             raise PBSError("No serial port configured")
 
         try:
-            # Read header
-            if hasattr(self.serial_port, 'timeout'):
-                old_timeout = self.serial_port.timeout
-                self.serial_port.timeout = timeout
-
-            header_data = self.serial_port.read(HEADER_SIZE)
-
-            if hasattr(self.serial_port, 'timeout'):
-                self.serial_port.timeout = old_timeout
-
-            if len(header_data) < HEADER_SIZE:
-                return None  # Timeout or incomplete
-
-            # Validate magic before reading more
-            if header_data[OFFSET_MAGIC] != MAGIC_BYTE:
-                raise PBSMagicError(f"Invalid magic: 0x{header_data[OFFSET_MAGIC]:02X}")
-
-            # Extract payload size
-            size = struct.unpack('>I', header_data[OFFSET_SIZE:OFFSET_SIZE + 4])[0]
-
-            if size > self.max_payload_size:
-                raise PBSValidationError(f"Payload size {size} exceeds maximum {self.max_payload_size}")
-
-            # Read payload
-            payload_data = b''
-            if size > 0:
-                payload_data = self.serial_port.read(size)
-                if len(payload_data) < size:
-                    return None  # Incomplete
-
-            return self.parse(header_data + payload_data)
-
+            if self.use_framing:
+                return self._receive_framed(timeout)
+            return self._receive_unframed(timeout)
         except PBSError:
             raise
         except Exception as e:
             raise PBSSerialError(f"Serial read failed: {e}") from e
+
+    def _receive_unframed(self, timeout: Optional[float]) -> Optional[PBSEnvelope]:
+        port = self.serial_port
+        has_timeout = hasattr(port, 'timeout')
+        if has_timeout:
+            old_timeout = port.timeout
+            port.timeout = timeout
+        try:
+            header_data = port.read(HEADER_SIZE)
+        finally:
+            if has_timeout:
+                port.timeout = old_timeout
+
+        if len(header_data) < HEADER_SIZE:
+            return None  # Timeout or incomplete
+
+        # Validate magic before reading more
+        if header_data[OFFSET_MAGIC] != MAGIC_BYTE:
+            raise PBSMagicError(f"Invalid magic: 0x{header_data[OFFSET_MAGIC]:02X}")
+
+        # Extract payload size
+        size = struct.unpack('>I', header_data[OFFSET_SIZE:OFFSET_SIZE + 4])[0]
+
+        if size > self.max_payload_size:
+            raise PBSValidationError(f"Payload size {size} exceeds maximum {self.max_payload_size}")
+
+        # Read payload
+        payload_data = b''
+        if size > 0:
+            payload_data = port.read(size)
+            if len(payload_data) < size:
+                return None  # Incomplete
+
+        return self._parse_unframed(header_data + payload_data)
+
+    def _max_encoded_frame_length(self) -> int:
+        """Longest COBS encoding of a valid envelope, delimiter excluded."""
+        n = HEADER_SIZE + self.max_payload_size
+        return n + n // 254 + 1
+
+    def _take_frame(self) -> Optional[bytes]:
+        """
+        Remove one frame (delimiter excluded) from the receive buffer.
+
+        Returns None when the buffer holds no delimiter yet. Returns b''
+        for an empty frame and for the tail of a discarded overlong frame.
+        """
+        buf = self._receive_buffer
+        idx = buf.find(0x00)
+        if idx < 0:
+            if len(buf) > self._max_encoded_frame_length():
+                del buf[:]
+                self._discard_to_delimiter = True
+                raise PBSFramingError(
+                    f"No frame delimiter within {self._max_encoded_frame_length()} bytes; "
+                    "discarding to the next delimiter"
+                )
+            return None
+        frame = bytes(buf[:idx])
+        del buf[:idx + 1]
+        if self._discard_to_delimiter:
+            self._discard_to_delimiter = False
+            return b''
+        return frame
+
+    def _receive_framed(self, timeout: Optional[float]) -> Optional[PBSEnvelope]:
+        port = self.serial_port
+        has_timeout = hasattr(port, 'timeout')
+        if has_timeout:
+            old_timeout = port.timeout
+            port.timeout = timeout
+        try:
+            while True:
+                frame = self._take_frame()
+                if frame is None:
+                    # Read what the port has buffered, at least one byte.
+                    chunk = port.read(getattr(port, 'in_waiting', 0) or 1)
+                    if not chunk:
+                        return None  # Timeout or end of stream; partial frame kept
+                    self._receive_buffer.extend(chunk)
+                    continue
+                if not frame:
+                    continue  # Empty frame
+                data = COBSFraming.decode(frame)
+                envelope = self._parse_unframed(data)
+                if envelope.size > self.max_payload_size:
+                    raise PBSValidationError(
+                        f"Payload size {envelope.size} exceeds maximum {self.max_payload_size}"
+                    )
+                if len(data) != HEADER_SIZE + envelope.size:
+                    raise PBSValidationError(
+                        f"Frame carries {len(data)} bytes; header Size gives "
+                        f"{HEADER_SIZE + envelope.size}"
+                    )
+                return envelope
+        finally:
+            if has_timeout:
+                port.timeout = old_timeout
 
     def find_sync(self, data: bytes) -> Tuple[int, Optional[bytes]]:
         """

@@ -1,7 +1,7 @@
 # PBS_LINK: Python Reference SDK for the PBS Envelope
 
 [![tests](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml?query=branch%3Amain)
-![Version](https://img.shields.io/badge/version-v0.1.2-blue)
+![Version](https://img.shields.io/badge/version-v0.1.3-blue)
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
@@ -9,7 +9,7 @@ PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message e
 
 | Item | Value |
 |------|-------|
-| Version | 0.1.2 (Beta) |
+| Version | 0.1.3 (Beta) |
 | pip distribution name | `pbs-link` |
 | Import package | `PBS_LINK` |
 | Implements | PBS-ENV-01 v1.3 |
@@ -37,11 +37,11 @@ The Pale Blue Systems Foundation publishes PBS_LINK for planned architectures in
 - **Lifetime:** TTL in seconds (u32); 0 means the envelope never expires. `parse(check_ttl=True)` rejects expired envelopes.
 - **Timestamp:** Unix microseconds from `time.time()` or a caller-supplied clock.
 - **Validation:** `parse()` checks length, Magic, CRC-32, priority, payload length and, optionally, TTL. Magic, CRC-32, priority and TTL failures raise `PBSMagicError`, `PBSCRCError`, `PBSPriorityError` and `PBSTTLError`; length failures raise their base class, `PBSValidationError`.
-- **Framing:** optional COBS framing (`use_framing=True`) with a 0x00 frame delimiter for byte-stream links.
+- **Framing:** optional COBS framing (`use_framing=True`) with a 0x00 frame delimiter for byte-stream links; `send()` writes frames and `receive()` reads, decodes and validates them.
 - **Resynchronization:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
 - **Dependencies:** none outside the Python standard library.
 
-[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-012) lists the limitations of 0.1.2, including the per-instance sequence counter. Version 0.1.2 corrects a COBS encoder defect present in 0.1.1 (see [CHANGELOG.md](CHANGELOG.md)).
+[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-013) lists the limitations of 0.1.3, including the per-instance sequence counter. [CHANGELOG.md](CHANGELOG.md) records the changes in each version.
 
 ---
 
@@ -129,7 +129,7 @@ python EXAMPLES/rover_alert.py
 python TESTS/doc_examples.py README.md DOCS/INTEGRATION.md DOCS/SPECIFICATIONS.md
 ```
 
-`pytest -q TESTS` runs the 55 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.8, 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
+`pytest -q TESTS` runs the 67 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.8, 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
 
 ---
 

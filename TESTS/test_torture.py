@@ -23,6 +23,7 @@ from PBS_LINK import (
     PBSPriorityError,
     PBSTTLError,
     PBSSerialError,
+    PBSFramingError,
     COBSFraming,
     calculate_crc32,
     verify_crc32,
@@ -449,6 +450,115 @@ class TestCOBSFraming(unittest.TestCase):
         # Should parse correctly
         envelope = link.parse(packet)
         self.assertEqual(envelope.payload, b"test")
+
+
+class ChunkedPort:
+    """Serial-port stand-in that returns at most the bytes queued so far.
+
+    read() returns b"" when nothing is queued, as a timed-out serial read
+    does. feed() queues more bytes.
+    """
+
+    def __init__(self, data=b""):
+        self._data = bytearray(data)
+        self.timeout = 5.0
+
+    def feed(self, data):
+        self._data.extend(data)
+
+    def read(self, n):
+        out = bytes(self._data[:n])
+        del self._data[:n]
+        return out
+
+
+class TestFramedReceive(unittest.TestCase):
+    """receive() with use_framing=True"""
+
+    def frames(self, *payloads):
+        tx = PBSLink(device_id="TX", use_framing=True)
+        return [tx.send(2, p) for p in payloads]
+
+    def test_receive_single_frame(self):
+        frame, = self.frames(b"hello")
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(frame), use_framing=True)
+        env = rx.receive()
+        self.assertEqual(env.payload, b"hello")
+        self.assertEqual(env.source_id, "TX")
+        self.assertIsNone(rx.receive())
+
+    def test_receive_consecutive_frames_in_order(self):
+        payloads = [b"a", b"\x00" * 5, bytes([1]) * 254 + b"\x00\x07", b"", b"end\x00"]
+        stream = b"".join(self.frames(*payloads))
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(stream), use_framing=True)
+        for p in payloads:
+            self.assertEqual(rx.receive().payload, p)
+        self.assertIsNone(rx.receive())
+
+    def test_empty_frames_are_skipped(self):
+        frame, = self.frames(b"x")
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(b"\x00\x00" + frame), use_framing=True)
+        self.assertEqual(rx.receive().payload, b"x")
+
+    def test_partial_frame_is_kept_across_timeouts(self):
+        frame, = self.frames(b"split across reads")
+        port = ChunkedPort(frame[:20])
+        rx = PBSLink(device_id="RX", serial_port=port, use_framing=True)
+        self.assertIsNone(rx.receive(timeout=0.1))
+        port.feed(frame[20:])
+        self.assertEqual(rx.receive(timeout=0.1).payload, b"split across reads")
+
+    def test_timeout_attribute_is_restored(self):
+        frame, = self.frames(b"t")
+        port = ChunkedPort(frame)
+        rx = PBSLink(device_id="RX", serial_port=port, use_framing=True)
+        rx.receive(timeout=0.25)
+        self.assertEqual(port.timeout, 5.0)
+
+    def test_corrupted_frame_raises_then_next_frame_parses(self):
+        bad, good = self.frames(b"corrupt me", b"good")
+        bad = bytearray(bad)
+        bad[10] ^= 0x01  # inside the Source ID; never creates or removes a 0x00
+        self.assertNotIn(0x00, bad[:-1])
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(bytes(bad) + good), use_framing=True)
+        with self.assertRaises(PBSCRCError):
+            rx.receive()
+        self.assertEqual(rx.receive().payload, b"good")
+
+    def test_undecodable_frame_raises_framing_error(self):
+        good, = self.frames(b"after")
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(b"\x05\x01\x00" + good), use_framing=True)
+        with self.assertRaises(PBSFramingError):
+            rx.receive()
+        self.assertEqual(rx.receive().payload, b"after")
+
+    def test_overlong_frame_raises_then_resynchronizes(self):
+        good, = self.frames(b"ok")
+        rx = PBSLink(device_id="RX", serial_port=None, max_payload_size=64, use_framing=True)
+        limit = rx._max_encoded_frame_length()
+        rx.serial_port = BytesIO(b"\x01" * (limit + 5) + b"\x00" + good)
+        with self.assertRaises(PBSFramingError):
+            rx.receive()
+        self.assertEqual(rx.receive().payload, b"ok")
+
+    def test_trailing_bytes_after_envelope_are_rejected(self):
+        tx = PBSLink(device_id="TX")
+        envelope = tx.send(1, b"abc") + b"\xAA"  # one byte more than Size
+        frame = COBSFraming.encode(envelope)
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(frame), use_framing=True)
+        with self.assertRaises(PBSValidationError):
+            rx.receive()
+
+    def test_payload_above_maximum_is_rejected(self):
+        frame, = self.frames(b"x" * 100)
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(frame), max_payload_size=50, use_framing=True)
+        with self.assertRaises(PBSError):
+            rx.receive()
+
+    def test_unframed_receive_unchanged(self):
+        packet = PBSLink(device_id="TX").send(0, b"raw")
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(packet))
+        self.assertEqual(rx.receive().payload, b"raw")
 
 
 class TestClockSource(unittest.TestCase):
