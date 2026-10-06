@@ -32,7 +32,7 @@ PBS_LINK builds and parses envelopes and writes them to a local serial port. It 
 PBS_LINK publishes an implementation of the envelope so that independent implementations can test against it. The repository provides:
 
 1. Envelope construction and parsing in `PBS_LINK/core.py`: source identity, priority, timestamp, TTL, sequence number and header CRC-32.
-2. A header test vector ([DOCS/SPECIFICATIONS.md §3.1](DOCS/SPECIFICATIONS.md#31-test-vector)) and 55 tests in `TESTS/test_torture.py`.
+2. A header test vector ([DOCS/SPECIFICATIONS.md §3.1](DOCS/SPECIFICATIONS.md#31-test-vector)) and 67 tests in `TESTS/test_torture.py`.
 3. The gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02, restated by section in [DOCS/INTEGRATION.md §5](DOCS/INTEGRATION.md#5-pbs-gateway-requirements). No PBS gateway implementation is published.
 
 ---
