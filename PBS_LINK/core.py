@@ -1,6 +1,6 @@
 """
 Pale Blue Systems - Reference SDK (v0.1.3 Beta)
-Implements: PBS-ENV-01 v1.3 (44-Byte Header)
+Implements: PBS-ENV-01 v1.5 (44-Byte Header)
 License: Apache 2.0
 Copyright 2026 Pale Blue Systems Foundation
 """
@@ -235,7 +235,7 @@ class PBSLink:
     """
     PBS_LINK Reference SDK
 
-    Implements PBS-ENV-01 v1.3 for sending and receiving PBS envelopes.
+    Implements PBS-ENV-01 v1.5 for sending and receiving PBS envelopes.
     Thread-safe, with optional COBS framing for stream transports.
 
     Example:
@@ -396,8 +396,11 @@ class PBSLink:
             data: Raw packet bytes (header + payload)
             validate_crc: If True, verify CRC32 (raises PBSCRCError if invalid)
             validate_priority: If True, reject reserved priority values 5-255
-            check_ttl: If True, verify TTL hasn't expired (requires timestamp comparison)
-            current_time: Current time for TTL check (default: now)
+            check_ttl: If True, raise PBSTTLError when the envelope has expired
+                       (PBS-ENV-01 Section 12.2). An envelope with TTL 0
+                       never expires.
+            current_time: Unix time in seconds for the TTL check
+                          (default: clock_source())
 
         Returns:
             PBSEnvelope with parsed fields
@@ -457,9 +460,10 @@ class PBSLink:
 
         payload = data[HEADER_SIZE:HEADER_SIZE + size]
 
-        # 6. TTL check (optional)
+        # 6. TTL check (optional). PBS-ENV-01 Section 12.2 applies when
+        # TTL > 0; an envelope with TTL 0 never expires (Section 12.1).
         if check_ttl and ttl > 0:
-            current = current_time or time.time()
+            current = self.clock_source() if current_time is None else current_time
             message_time = timestamp / 1_000_000
             age = current - message_time
             if age > ttl:
@@ -482,7 +486,11 @@ class PBSLink:
             raw_header=header
         )
 
-    def receive(self, timeout: Optional[float] = None) -> Optional[PBSEnvelope]:
+    def receive(
+        self,
+        timeout: Optional[float] = None,
+        check_ttl: bool = True
+    ) -> Optional[PBSEnvelope]:
         """
         Receive and parse one PBS envelope from serial_port.
 
@@ -495,10 +503,18 @@ class PBSLink:
         (consecutive delimiters) are skipped. A frame that fails decoding or
         validation raises; the next call continues with the next frame.
 
+        The envelope is checked for TTL expiry on receipt, as PBS-ENV-01
+        Section 12.2 requires of every receiver: with TTL > 0 it is expired
+        when clock_source() - Timestamp / 10^6 > TTL. An envelope with TTL 0
+        never expires. An expired envelope raises PBSTTLError after it has
+        been read in full, so the next call reads the next envelope or frame.
+
         Args:
             timeout: Read timeout in seconds (None = blocking). Applied to the
                      port's timeout attribute, if it has one, for the duration
                      of the call (unframed: the header read only).
+            check_ttl: If False, skip the expiry check and return expired
+                       envelopes (default True).
 
         Returns:
             PBSEnvelope, or None when a read returns fewer bytes than needed
@@ -509,20 +525,22 @@ class PBSLink:
             PBSFramingError: COBS decoding failed, or no delimiter arrived
                              within the maximum frame length
             PBSValidationError: Received data failed validation
+            PBSTTLError: The envelope has expired (subclass of
+                         PBSValidationError)
         """
         if not self.serial_port:
             raise PBSError("No serial port configured")
 
         try:
             if self.use_framing:
-                return self._receive_framed(timeout)
-            return self._receive_unframed(timeout)
+                return self._receive_framed(timeout, check_ttl)
+            return self._receive_unframed(timeout, check_ttl)
         except PBSError:
             raise
         except Exception as e:
             raise PBSSerialError(f"Serial read failed: {e}") from e
 
-    def _receive_unframed(self, timeout: Optional[float]) -> Optional[PBSEnvelope]:
+    def _receive_unframed(self, timeout: Optional[float], check_ttl: bool) -> Optional[PBSEnvelope]:
         port = self.serial_port
         has_timeout = hasattr(port, 'timeout')
         if has_timeout:
@@ -554,7 +572,7 @@ class PBSLink:
             if len(payload_data) < size:
                 return None  # Incomplete
 
-        return self._parse_unframed(header_data + payload_data)
+        return self._parse_unframed(header_data + payload_data, check_ttl=check_ttl)
 
     def _max_encoded_frame_length(self) -> int:
         """Longest COBS encoding of a valid envelope, delimiter excluded."""
@@ -586,7 +604,7 @@ class PBSLink:
             return b''
         return frame
 
-    def _receive_framed(self, timeout: Optional[float]) -> Optional[PBSEnvelope]:
+    def _receive_framed(self, timeout: Optional[float], check_ttl: bool) -> Optional[PBSEnvelope]:
         port = self.serial_port
         has_timeout = hasattr(port, 'timeout')
         if has_timeout:
@@ -605,7 +623,7 @@ class PBSLink:
                 if not frame:
                     continue  # Empty frame
                 data = COBSFraming.decode(frame)
-                envelope = self._parse_unframed(data)
+                envelope = self._parse_unframed(data, check_ttl=check_ttl)
                 if envelope.size > self.max_payload_size:
                     raise PBSValidationError(
                         f"Payload size {envelope.size} exceeds maximum {self.max_payload_size}"

@@ -1,6 +1,6 @@
 """
 PBS_LINK: Pale Blue Systems Reference SDK
-Implements PBS-ENV-01 v1.3 (44-Byte Header)
+Implements PBS-ENV-01 v1.5 (44-Byte Header)
 """
 
 from .core import (

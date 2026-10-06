@@ -1,6 +1,6 @@
 """
 PBS_LINK Torture Tests
-Validates PBS-ENV-01 v1.3 conformance
+Validates PBS-ENV-01 v1.5 conformance
 
 Run with: python -m pytest TESTS/test_torture.py -v
 """
@@ -579,6 +579,115 @@ class TestFramedReceive(unittest.TestCase):
         packet = PBSLink(device_id="TX").send(0, b"raw")
         rx = PBSLink(device_id="RX", serial_port=BytesIO(packet))
         self.assertEqual(rx.receive().payload, b"raw")
+
+
+class TestReceiveExpiry(unittest.TestCase):
+    """PBS-ENV-01 Section 12.2 expiry check on receipt.
+
+    T is the Timestamp of the PBS-ENV-01 Section 13.2 test vector,
+    2026-01-01T00:00:00Z. Clocks are fixed with clock_source, so no test
+    depends on the time at which it runs.
+    """
+
+    T = 1_767_225_600.0
+
+    def envelope(self, ttl, payload=b"", framed=False, stamped=None):
+        """The Section 13.2 envelope (Sequence 1, "Rover-A", CRITICAL, ACK)."""
+        stamp = self.T if stamped is None else stamped
+        tx = PBSLink(device_id="Rover-A", use_framing=framed, clock_source=lambda: stamp)
+        return tx.send(Priority.CRITICAL, payload, ttl=ttl, require_ack=True)
+
+    def receiver(self, stream, now, framed=False):
+        return PBSLink(device_id="RX", serial_port=BytesIO(stream),
+                       use_framing=framed, clock_source=lambda: now)
+
+    def test_unframed_receive_rejects_expired_envelope(self):
+        expired = self.envelope(30, b"stale")
+        current = self.envelope(0, b"next")
+        rx = self.receiver(expired + current, self.T + 31)
+        with self.assertRaises(PBSTTLError):
+            rx.receive()
+        # The expired payload was read in full; the stream stays aligned.
+        self.assertEqual(rx.receive().payload, b"next")
+
+    def test_framed_receive_rejects_and_consumes_expired_frame(self):
+        expired = self.envelope(30, b"stale", framed=True)
+        current = self.envelope(0, b"next", framed=True)
+        rx = self.receiver(expired + current, self.T + 31, framed=True)
+        with self.assertRaises(PBSTTLError):
+            rx.receive()
+        self.assertEqual(rx.receive().payload, b"next")
+        self.assertIsNone(rx.receive())
+
+    def test_check_ttl_false_returns_expired_envelope(self):
+        for framed in (False, True):
+            with self.subTest(framed=framed):
+                rx = self.receiver(self.envelope(30, b"stale", framed=framed),
+                                   self.T + 31, framed=framed)
+                env = rx.receive(check_ttl=False)
+                self.assertEqual(env.payload, b"stale")
+                self.assertEqual(env.ttl, 30)
+
+    def test_unexpired_envelope_is_returned(self):
+        # Section 12.5: the Section 13.2 envelope (TTL 30) is accepted at
+        # T+30 s; an age equal to TTL is not expired.
+        for framed in (False, True):
+            with self.subTest(framed=framed):
+                rx = self.receiver(self.envelope(30, framed=framed),
+                                   self.T + 30, framed=framed)
+                env = rx.receive()
+                self.assertEqual(env.ttl, 30)
+                self.assertEqual(env.crc32, 0x588721ED)
+
+    def test_expiry_check_uses_clock_source(self):
+        # Stamped 2100-01-01: expired by the receiver's clock_source, not by
+        # time.time(), at which the envelope is not yet stamped.
+        future = 4_102_444_800.0
+        packet = self.envelope(30, stamped=future)
+        rx = self.receiver(packet, future + 31)
+        with self.assertRaises(PBSTTLError):
+            rx.parse(packet, check_ttl=True)
+        with self.assertRaises(PBSTTLError):
+            rx.receive()
+
+    def test_current_time_zero_is_used(self):
+        # Stamped at Unix time 0 with TTL 10. current_time=0.0 is a time,
+        # not "unset": the envelope is not expired at 0.0 although the
+        # receiver's clock_source (11.0) would expire it.
+        packet = self.envelope(10, stamped=0.0)
+        rx = PBSLink(device_id="RX", clock_source=lambda: 11.0)
+        self.assertEqual(rx.parse(packet, check_ttl=True, current_time=0.0).ttl, 10)
+        with self.assertRaises(PBSTTLError):
+            rx.parse(packet, check_ttl=True, current_time=11.0)
+
+    def test_ttl_zero_never_expires(self):
+        # Section 12.5: the Section 13.2 header with TTL 0, CRC32 0x8757080E.
+        now = self.T + 365 * 86_400
+        for framed in (False, True):
+            with self.subTest(framed=framed):
+                packet = self.envelope(0, framed=framed)
+                rx = self.receiver(packet, now, framed=framed)
+                env = rx.receive()
+                self.assertEqual(env.ttl, 0)
+                self.assertEqual(env.crc32, 0x8757080E)
+                self.assertEqual(rx.parse(packet, check_ttl=True).crc32, 0x8757080E)
+
+    def test_section_12_5_ttl_30_case(self):
+        header = self.envelope(30)
+        self.assertEqual(header.hex(), (
+            "10000100" "00010000" "526f7665722d4100" "0000000000000000"
+            "0006474846204000" "00000000" "0000001e" "588721ed"
+        ))
+        # Forwarded unchanged: accepted at T+30 s, expired at T+31 s.
+        self.assertEqual(self.receiver(header, self.T + 30).receive().ttl, 30)
+        with self.assertRaises(PBSTTLError):
+            self.receiver(header, self.T + 31).receive()
+        # TTL reduced by a 20 s store (TTL 10, CRC32 0xCDE710AF): expired on
+        # receipt at T+26 s.
+        reduced = self.envelope(10)
+        self.assertEqual(reduced[0x28:0x2C], bytes.fromhex("cde710af"))
+        with self.assertRaises(PBSTTLError):
+            self.receiver(reduced, self.T + 26).receive()
 
 
 class TestClockSource(unittest.TestCase):
