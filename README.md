@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
-PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN)). It builds and parses envelopes, optionally frames them with COBS, and writes them to a serial port object.
+PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN)). It builds and parses envelopes, optionally frames them with COBS, and writes them to and reads them from a serial port object.
 
 | Item | Value |
 |------|-------|
@@ -129,7 +129,7 @@ python EXAMPLES/rover_alert.py
 python TESTS/doc_examples.py README.md DOCS/INTEGRATION.md DOCS/SPECIFICATIONS.md
 ```
 
-`pytest -q TESTS` runs the 67 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.8, 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
+`pytest -q TESTS` runs the 68 tests in `TESTS/test_torture.py`. `TESTS/doc_examples.py` executes every Python block in the listed documents. The [tests workflow](.github/workflows/tests.yml) runs the same steps on Python 3.8, 3.9, 3.10, 3.11 and 3.12 for every push and pull request.
 
 ---
 
