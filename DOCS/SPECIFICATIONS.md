@@ -1,6 +1,6 @@
 # PBS-ENV-01 v1.5 Envelope Header: PBS_LINK Implementation Reference
 
-This document summarizes the PBS-ENV-01 v1.5 header as PBS_LINK 0.1.3 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.5 (PBS v1.5.0, 2026-10-06), in PBS-PROTOCOL-OPEN. The header layout is unchanged since v1.3. Where this summary and the specification differ, the specification controls.
+This document summarizes the PBS-ENV-01 v1.5 header as PBS_LINK 0.1.4 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.5 (PBS v1.5.0, 2026-10-06), in PBS-PROTOCOL-OPEN. The header layout is unchanged since v1.3. Where this summary and the specification differ, the specification controls.
 
 ## 1. Encoding
 
@@ -55,7 +55,7 @@ Receiver (PBS-ENV-01 §13.1):
 3. Compute the CRC-32 over all 44 bytes.
 4. Discard the envelope if the computed value differs from the extracted value.
 
-Before the PBS v1.4.1 errata (2026-10-06), five clauses gave the CRC input as bytes 0x00–0x27: the PBS-ENV-01 §4 field table, PBS-SEC-A-01 §4.1 step 3 and §5.1 step 2, and PBS-CONFORMANCE-01 §4.3 and §5.1. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS_LINK 0.1.3 implements the 44-byte rule.
+Before the PBS v1.4.1 errata (2026-10-06), five clauses gave the CRC input as bytes 0x00–0x27: the PBS-ENV-01 §4 field table, PBS-SEC-A-01 §4.1 step 3 and §5.1 step 2, and PBS-CONFORMANCE-01 §4.3 and §5.1. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS_LINK 0.1.4 implements the 44-byte rule.
 
 The CRC-32 detects corruption. It does not detect deliberate modification (PBS-SEC-A-01 §3.3).
 

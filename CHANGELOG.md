@@ -2,6 +2,25 @@
 
 All notable changes to PBS_LINK (pip distribution `pbs-link`, import package `PBS_LINK`) are recorded here. Versions follow semantic versioning.
 
+## [0.1.4] - 2026-10-06
+
+### Fixed
+
+- `receive()` returned expired envelopes. PBS-ENV-01 v1.5 Section 12.2 requires every receiver to check TTL expiration on receipt. `receive()` now applies the check on the unframed and framed paths: an envelope with TTL > 0 for which `clock_source() − Timestamp / 10^6 > TTL` raises `PBSTTLError`. The envelope has been read in full when the exception is raised, so the unframed stream stays aligned and an expired frame is consumed like any other invalid frame. An envelope with TTL 0 never expires (Section 12.1).
+- The TTL check read `time.time()` when no `current_time` was passed and ignored the `clock_source` given to `PBSLink`. It now reads `clock_source()`.
+- `parse(check_ttl=True, current_time=0.0)` treated 0.0 as unset and read the clock. It now uses 0.0.
+
+### Changed
+
+- `receive()` raises `PBSTTLError` for an expired envelope. Code that needs expired envelopes calls `receive(check_ttl=False)`. The check compares the link's `clock_source` with Timestamp; an error in that clock shifts each expiry decision by the same amount.
+- Documentation follows PBS v1.5.0 (2026-10-06): PBS-ENV-01, PBS-SEC-A-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01, PBS-DTN-MAP-02 and PBS-SEC-B-01 are v1.5. README and `DOCS/INTEGRATION.md` §5.1 and §5.3 state the v1.5 relay and gateway rules: no header field, TTL and CRC-32 included, is modified in transit; the 44 header bytes are forwarded as received; expiry is checked against the unchanged Timestamp and TTL; an envelope with TTL 0 is never discarded as TTL-expired. `DOCS/INTEGRATION.md` §5.4 and §5.4.1 state the PBS-DTN-MAP-01 v1.5 lifetime (Sections 6.1 and 6.1.1), priority (Section 6.3) and TTL (Section 7.3) rules and the PBS-DTN-MAP-02 v1.5 Section 4 no-expiry lifetime.
+
+### Added
+
+- `receive(check_ttl=True)` parameter.
+- `TESTS/test_torture.py::TestReceiveExpiry`: 8 tests covering expired unframed and framed receive, `check_ttl=False`, an unexpired envelope at an age equal to TTL, the receiver's `clock_source`, `current_time=0.0`, TTL 0, and the PBS-ENV-01 Section 12.5 TTL 30 case. Each fails with its fix reverted. 76 tests.
+- `DOCS/INTEGRATION.md` §4.6 and `DOCS/SPECIFICATIONS.md` §6: executable examples of the expiry check; §6 reproduces the PBS-ENV-01 Section 12.5 test cases (CRC-32 `0x588721ED`, `0xCDE710AF`, `0x8757080E`).
+
 ## [0.1.3] - 2026-10-06
 
 ### Fixed

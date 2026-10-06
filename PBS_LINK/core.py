@@ -1,5 +1,5 @@
 """
-Pale Blue Systems - Reference SDK (v0.1.3 Beta)
+Pale Blue Systems - Reference SDK (v0.1.4 Beta)
 Implements: PBS-ENV-01 v1.5 (44-Byte Header)
 License: Apache 2.0
 Copyright 2026 Pale Blue Systems Foundation

@@ -1,6 +1,6 @@
 # PBS_LINK System Integration Guide
 
-**Applies to:** PBS_LINK 0.1.3 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.5 (PBS v1.5.0)
+**Applies to:** PBS_LINK 0.1.4 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.5 (PBS v1.5.0)
 
 This guide describes the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 restates, by reference to the PBS specifications, the requirements that apply to a conformant PBS gateway.
 
@@ -34,7 +34,7 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
                                 (optional COBS)                                  (not published)
 ```
 
-| Function | PBS_LINK 0.1.3 | PBS gateway (requirement source) |
+| Function | PBS_LINK 0.1.4 | PBS gateway (requirement source) |
 |----------|----------------|----------------------------------|
 | Build envelope (44-byte header + payload) | `send()`, `build_envelope()` | — |
 | Header CRC-32 | Computed on send; verified by `parse()` and `receive()` | Verify before processing and before forwarding (PBS-ENV-01 §13, §15) |
@@ -102,7 +102,7 @@ On both paths `receive()` applies the PBS-ENV-01 §12.2 expiry check on receipt:
 
 `find_sync(data)` returns `(offset, data[offset:])` for the first offset at which byte 0x10 starts a 44-byte header with a valid CRC-32, or `(-1, data)` if there is none. It restores envelope alignment in an unframed byte stream after data loss.
 
-### 3.4 Limitations of PBS_LINK 0.1.3
+### 3.4 Limitations of PBS_LINK 0.1.4
 
 - No scheduling, queuing, preemption, storage or retransmission.
 - `require_ack=True` sets Flags bit 0 (0x01). PBS_LINK does not wait for, match or retransmit on acknowledgements.
