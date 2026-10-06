@@ -23,7 +23,7 @@ Continuous end-to-end connectivity is therefore not assumed, and network paths c
 
 PBS envelopes are user-application protocol data (PBS-LNIS-01 §2; PBS-DTN-MAP-02 §1). On LunaNet they are carried over IP or BPv7 network services (PBS-LNIS-01 §2). PBS-ENV-01 does not define transport, routing or physical-layer behavior (PBS-ENV-01 §2). A gateway or endpoint that uses BPv7 carries envelopes in bundles as PBS-DTN-MAP-01 and PBS-DTN-MAP-02 specify.
 
-PBS_LINK builds and parses envelopes and writes them to a local serial port. It does not schedule, store or forward them ([DOCS/INTEGRATION.md §2](DOCS/INTEGRATION.md#2-data-path-and-allocation-of-functions)).
+PBS_LINK builds and parses envelopes, writes them to a local serial port and reads them from it, unframed or COBS-framed. It does not schedule, store or forward them ([DOCS/INTEGRATION.md §2](DOCS/INTEGRATION.md#2-data-path-and-allocation-of-functions)).
 
 ---
 
@@ -32,7 +32,7 @@ PBS_LINK builds and parses envelopes and writes them to a local serial port. It 
 PBS_LINK publishes an implementation of the envelope so that independent implementations can test against it. The repository provides:
 
 1. Envelope construction and parsing in `PBS_LINK/core.py`: source identity, priority, timestamp, TTL, sequence number and header CRC-32.
-2. A header test vector ([DOCS/SPECIFICATIONS.md §3.1](DOCS/SPECIFICATIONS.md#31-test-vector)) and 67 tests in `TESTS/test_torture.py`.
+2. A header test vector ([DOCS/SPECIFICATIONS.md §3.1](DOCS/SPECIFICATIONS.md#31-test-vector)) and 68 tests in `TESTS/test_torture.py`.
 3. The gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02, restated by section in [DOCS/INTEGRATION.md §5](DOCS/INTEGRATION.md#5-pbs-gateway-requirements). No PBS gateway implementation is published.
 
 ---

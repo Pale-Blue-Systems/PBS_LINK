@@ -550,10 +550,30 @@ class TestFramedReceive(unittest.TestCase):
             rx.receive()
 
     def test_payload_above_maximum_is_rejected(self):
-        frame, = self.frames(b"x" * 100)
-        rx = PBSLink(device_id="RX", serial_port=BytesIO(frame), max_payload_size=50, use_framing=True)
-        with self.assertRaises(PBSError):
+        # 301-byte payload against a 300-byte maximum. The 0x00 keeps the
+        # encoded frame within the delimiter search limit, so the frame is
+        # decoded and the Size check, not the overlong-frame check, rejects it.
+        frame, = self.frames(b"x" * 200 + b"\x00" + b"x" * 100)
+        rx = PBSLink(device_id="RX", serial_port=BytesIO(frame), max_payload_size=300, use_framing=True)
+        self.assertLessEqual(len(frame) - 1, rx._max_encoded_frame_length())
+        with self.assertRaises(PBSValidationError) as cm:
             rx.receive()
+        self.assertIn("exceeds maximum", str(cm.exception))
+
+    def test_timeout_restored_when_read_raises(self):
+        class RaisingPort:
+            timeout = 5.0
+
+            def read(self, n):
+                raise OSError("read failed")
+
+        for use_framing in (False, True):
+            with self.subTest(use_framing=use_framing):
+                port = RaisingPort()
+                rx = PBSLink(device_id="RX", serial_port=port, use_framing=use_framing)
+                with self.assertRaises(PBSSerialError):
+                    rx.receive(timeout=0.25)
+                self.assertEqual(port.timeout, 5.0)
 
     def test_unframed_receive_unchanged(self):
         packet = PBSLink(device_id="TX").send(0, b"raw")
