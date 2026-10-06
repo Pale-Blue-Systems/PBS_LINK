@@ -36,8 +36,8 @@ Additional context on why this work is published now is available in [`WHY-NOW.m
 This package is currently in **v0.1.1 Beta**. You can install it directly from the source:
 
 ```bash
-git clone https://github.com/pale-blue-systems/pbs-link.git
-cd pbs-link
+git clone https://github.com/Pale-Blue-Systems/PBS_LINK.git
+cd PBS_LINK
 pip install .
 ```
 
