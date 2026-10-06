@@ -5,7 +5,7 @@ setup(
     version="0.1.1",
     description="Reference SDK for the Pale Blue Systems Protocol (PBS-ENV-01 v1.3)",
     author="Pale Blue Systems",
-    url="https://github.com/pale-blue-systems/pbs-link",
+    url="https://github.com/Pale-Blue-Systems/PBS_LINK",
     packages=find_packages(),
     install_requires=[],
     classifiers=[
