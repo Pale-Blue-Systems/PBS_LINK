@@ -171,7 +171,7 @@ All multi-byte fields are big-endian.
 | 0x24 | TTL | `u32` | Time-to-live, seconds; `0` = never expires |
 | 0x28 | CRC32 | `u32` | CRC-32 of bytes 0x00–0x2B with 0x28–0x2B set to zero |
 
-[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md) gives the CRC-32 parameters and a test vector. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md).
+[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md) gives the CRC-32 parameters and a test vector. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.3 as corrected by the PBS v1.4.1 errata (2026-10-06).
 
 ---
 
