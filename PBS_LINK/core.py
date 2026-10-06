@@ -1,8 +1,8 @@
 """
-Pale Blue Systems - Reference SDK (v0.1.1 Beta)
+Pale Blue Systems - Reference SDK (v0.1.2 Beta)
 Implements: PBS-ENV-01 v1.3 (44-Byte Header)
 License: Apache 2.0
-Copyright 2026 Pale Blue Systems
+Copyright 2026 Pale Blue Systems Foundation
 """
 import struct
 import time
@@ -163,7 +163,9 @@ class COBSFraming:
             block_len = idx - block_start
             output.append(block_len + 1)
             output.extend(data[block_start:idx])
-            if idx < len(data) and data[idx] == 0x00:
+            # Code 0xFF (a full 254-byte block) carries no implicit zero, so
+            # a 0x00 that follows it starts the next block and is not consumed.
+            if block_len < 254 and idx < len(data) and data[idx] == 0x00:
                 idx += 1
 
         # If data ended with a zero, add terminating code byte

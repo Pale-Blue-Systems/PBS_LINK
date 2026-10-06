@@ -1,6 +1,6 @@
 # PBS_LINK System Integration Guide
 
-**Applies to:** PBS_LINK 0.1.1 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
+**Applies to:** PBS_LINK 0.1.2 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
 
 This guide describes the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 restates, by reference to the PBS specifications, the requirements that apply to a conformant PBS gateway.
 
@@ -34,7 +34,7 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
                                 (optional COBS)                                  (not published)
 ```
 
-| Function | PBS_LINK 0.1.1 | PBS gateway (requirement source) |
+| Function | PBS_LINK 0.1.2 | PBS gateway (requirement source) |
 |----------|----------------|----------------------------------|
 | Build envelope (44-byte header + payload) | `send()`, `build_envelope()` | — |
 | Header CRC-32 | Computed on send; verified by `parse()` | Verify before processing and before forwarding (PBS-ENV-01 §13, §15) |
@@ -57,7 +57,7 @@ All behavior below is implemented in `PBS_LINK/core.py`.
 
 `send(priority, payload, ttl=0, require_ack=False)` executes these steps:
 
-1. Validates the input. `payload` is `str` (encoded as UTF-8) or `bytes`; `priority` is 0–4; the payload length does not exceed `max_payload_size`; `ttl` is not negative. A violation raises `ValueError`.
+1. Validates the input. `payload` is `str` (encoded as UTF-8) or `bytes`; `priority` is 0–4; the payload length does not exceed `max_payload_size`; `ttl` is not negative. A violation raises `ValueError`. A `ttl` above 4,294,967,295 or a non-integer `priority` passes these checks and raises `struct.error` when the header is packed (step 5).
 2. Increments the sequence number under a lock. The first envelope from a `PBSLink` instance carries sequence 1. The counter wraps from 65535 to 0.
 3. Encodes the first 16 characters of `device_id` as UTF-8, truncates the result to 16 bytes and pads it with 0x00 to 16 bytes.
 4. Sets Timestamp to `int(clock_source() * 1_000_000)`. `clock_source` defaults to `time.time`; any callable that returns Unix time in seconds replaces it.
@@ -97,7 +97,7 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 
 `find_sync(data)` returns `(offset, data[offset:])` for the first offset at which byte 0x10 starts a 44-byte header with a valid CRC-32, or `(-1, data)` if there is none. It restores envelope alignment in an unframed byte stream after data loss.
 
-### 3.4 Limitations of PBS_LINK 0.1.1
+### 3.4 Limitations of PBS_LINK 0.1.2
 
 - No scheduling, queuing, preemption, storage or retransmission.
 - `require_ack=True` sets Flags bit 0 (0x01). PBS_LINK does not wait for, match or retransmit on acknowledgements.
@@ -109,7 +109,6 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 - The sequence counter belongs to one `PBSLink` instance and is held in memory only. The first envelope from each new instance carries sequence 1. A process restart, or two instances with the same `device_id`, therefore breaks the per-source monotonic sequence that PBS-ENV-01 §8 and PBS-CONFORMANCE-01 §7 require, and a receiver that tracks sequence numbers reports false gaps or duplicates. Use one `PBSLink` instance per Source ID. To continue the sequence after a restart, store the last sequence number sent and assign it to `link.sequence` before the first `send()`; the next envelope carries that value plus 1, modulo 65,536.
 - `receive()` reads unframed envelopes only. With `use_framing=True` it raises `PBSMagicError` on the first byte of a COBS frame. To receive a framed stream, split it at 0x00 delimiters and pass each frame, including its delimiter, to `parse()`.
 - `parse()` checks payload length (step 6) before TTL (step 7); PBS-ENV-01 §14 orders TTL validation before payload extraction. An expired envelope with a short payload therefore raises `PBSValidationError` instead of `PBSTTLError`. Both exceptions reject the envelope.
-- Defect: `COBSFraming.encode()` drops a 0x00 byte that follows a run of non-zero bytes whose length is a multiple of 254 (254, 508, 762, ...), counted from the previous 0x00 or from the start of the envelope. Each dropped byte shortens the decoded envelope by one byte, and `parse()` raises `PBSValidationError` ("Incomplete payload"). Unframed transport is not affected.
 
 ---
 
@@ -234,7 +233,7 @@ PBS-ENV-01 §12.3 marks the timestamp-based method, which leaves TTL unchanged, 
 
 ### 5.4 BPv7 Encapsulation
 
-PBS-DTN-MAP-01 (v1.3, status "Optional (Interoperability)") and PBS-DTN-MAP-02 (v1.4, status "Optional Interoperability Profile") both define carriage of PBS over BPv7. Neither document states that it replaces the other. PBS-CONFORMANCE-01 §3.1 lists PBS-DTN-MAP-01 as optional and requires an optional specification to be implemented fully if claimed.
+PBS-DTN-MAP-01 (v1.3, status "Optional (Interoperability)") and PBS-DTN-MAP-02 (v1.4, status "Optional Interoperability Profile") both define carriage of PBS over BPv7. Neither document states that it replaces the other. PBS-CONFORMANCE-01 §3.1 lists PBS-DTN-MAP-01 and PBS-DTN-MAP-02 as optional and requires an optional specification to be implemented fully if claimed.
 
 | Topic | PBS-DTN-MAP-01 v1.3 | PBS-DTN-MAP-02 v1.4 |
 |-------|---------------------|---------------------|

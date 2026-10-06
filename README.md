@@ -1,7 +1,7 @@
 # PBS_LINK: Python Reference SDK for the PBS Envelope
 
 [![tests](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml?query=branch%3Amain)
-![Version](https://img.shields.io/badge/version-v0.1.1-blue)
+![Version](https://img.shields.io/badge/version-v0.1.2-blue)
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
@@ -9,7 +9,7 @@ PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message e
 
 | Item | Value |
 |------|-------|
-| Version | 0.1.1 (Beta) |
+| Version | 0.1.2 (Beta) |
 | pip distribution name | `pbs-link` |
 | Import package | `PBS_LINK` |
 | Implements | PBS-ENV-01 v1.3 |
@@ -24,7 +24,7 @@ PBS_LINK is an endpoint library. It does not schedule, store, retransmit or forw
 
 ## Context
 
-Pale Blue Systems publishes PBS_LINK for planned architectures in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. No current operational failure motivates it. It provides a published envelope implementation for experimentation, integration and interoperability testing before connectivity conventions are fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
+The Pale Blue Systems Foundation publishes PBS_LINK for planned architectures in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. No current operational failure motivates it. It provides a published envelope implementation for experimentation, integration and interoperability testing before connectivity conventions are fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
 
 ---
 
@@ -41,7 +41,7 @@ Pale Blue Systems publishes PBS_LINK for planned architectures in which space ag
 - **Resynchronization:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
 - **Dependencies:** none outside the Python standard library.
 
-[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-011) lists the limitations of 0.1.1, including the per-instance sequence counter and a COBS encoder defect that drops a 0x00 following a non-zero run whose length is a multiple of 254 bytes.
+[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-012) lists the limitations of 0.1.2, including the per-instance sequence counter. Version 0.1.2 corrects a COBS encoder defect present in 0.1.1 (see [CHANGELOG.md](CHANGELOG.md)).
 
 ---
 
@@ -190,4 +190,4 @@ All multi-byte fields are big-endian.
 This project is licensed under the **Apache License 2.0**.  
 See the [LICENSE](LICENSE) file for details.
 
-Copyright © 2026 **Pale Blue Systems**
+Copyright © 2026 **Pale Blue Systems Foundation**

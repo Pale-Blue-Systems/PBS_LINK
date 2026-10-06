@@ -431,6 +431,15 @@ class TestCOBSFraming(unittest.TestCase):
         decoded = COBSFraming.decode(encoded[:-1])
         self.assertEqual(decoded, data)
 
+    def test_cobs_zero_after_full_block(self):
+        """A 0x00 after a full 254-byte block (code 0xFF) must survive"""
+        for run in (253, 254, 255, 508, 762):
+            for tail in (b"", b"\x00", b"\x00\x07", b"\x07"):
+                data = bytes([0x01]) * run + tail
+                encoded = COBSFraming.encode(data)
+                self.assertNotIn(0x00, encoded[:-1])
+                self.assertEqual(COBSFraming.decode(encoded[:-1]), data)
+
     def test_framed_send_parse(self):
         """Framing should work end-to-end"""
         link = PBSLink(device_id="FRAMED", use_framing=True)

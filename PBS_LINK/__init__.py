@@ -38,8 +38,8 @@ from .core import (
     MAX_PAYLOAD_SIZE_DEFAULT,
 )
 
-__version__ = "0.1.1"
-__author__ = "Pale Blue Systems"
+__version__ = "0.1.2"
+__author__ = "Pale Blue Systems Foundation"
 __license__ = "Apache 2.0"
 
 __all__ = [
