@@ -1,4 +1,4 @@
-"""Build a CRITICAL alert and a BULK telemetry envelope with PBS-LINK.
+"""Build a CRITICAL alert and a BULK telemetry envelope with PBS_LINK.
 
 Run after installing the package (pip install .):
 

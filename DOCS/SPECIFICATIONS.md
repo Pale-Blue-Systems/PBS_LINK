@@ -1,6 +1,6 @@
-# PBS-ENV-01 v1.3 Envelope Header: PBS-LINK Implementation Reference
+# PBS-ENV-01 v1.3 Envelope Header: PBS_LINK Implementation Reference
 
-This document summarises the PBS-ENV-01 v1.3 header as PBS-LINK 0.1.1 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) in PBS-PROTOCOL-OPEN. Where this summary and the specification differ, the specification controls.
+This document summarizes the PBS-ENV-01 v1.3 header as PBS_LINK 0.1.1 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) in PBS-PROTOCOL-OPEN. Where this summary and the specification differ, the specification controls.
 
 ## 1. Encoding
 
@@ -9,7 +9,7 @@ This document summarises the PBS-ENV-01 v1.3 header as PBS-LINK 0.1.1 implements
 - Integers: unsigned.
 - Source ID: UTF-8, padded with 0x00 to 16 bytes.
 - Reserved bytes: 0x00 on transmission; ignored on reception (PBS-ENV-01 §18).
-- Python `struct` format used by PBS-LINK: `'>B B B x H xx 16s Q I I I'` (`HEADER_FORMAT`). The `x` pad bytes encode the reserved fields as 0x00.
+- Python `struct` format used by PBS_LINK: `'>B B B x H xx 16s Q I I I'` (`HEADER_FORMAT`). The `x` pad bytes encode the reserved fields as 0x00.
 
 ## 2. Field Layout
 
@@ -55,7 +55,7 @@ Receiver (PBS-ENV-01 §13.1):
 3. Compute the CRC-32 over all 44 bytes.
 4. Discard the envelope if the computed value differs from the extracted value.
 
-Before the PBS v1.4.1 erratum, the PBS-ENV-01 field table and PBS-SEC-A-01 §4.1 step 3 gave the CRC input as bytes 0x00–0x27. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS-LINK 0.1.1 implements the 44-byte rule.
+Before the PBS v1.4.1 erratum, the PBS-ENV-01 field table and PBS-SEC-A-01 §4.1 step 3 gave the CRC input as bytes 0x00–0x27. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS_LINK 0.1.1 implements the 44-byte rule.
 
 The CRC-32 detects corruption. It does not detect deliberate modification (PBS-SEC-A-01 §3.3).
 
@@ -69,7 +69,7 @@ Header-only envelope: Magic `0x10`, Priority `0` (CRITICAL), Flags `0x01`, Seque
 0x20  00 00 00 00  00 00 00 1e  58 87 21 ed
 ```
 
-CRC-32 = `0x588721ED`. The same computation over bytes 0x00–0x27 only gives `0x019507AC`; a receiver applying Section 3 discards a header that carries that value. PBS-LINK reproduces the vector:
+CRC-32 = `0x588721ED`. The same computation over bytes 0x00–0x27 only gives `0x019507AC`; a receiver applying Section 3 discards a header that carries that value. PBS_LINK reproduces the vector:
 
 ```python
 import zlib
@@ -97,7 +97,7 @@ assert verify_crc32(header)
 | 3 | LOW | Opportunistic or deferrable data |
 | 4 | BULK | Non-urgent, high-volume data |
 
-Values 5–255 are reserved and MUST NOT be used; receivers MUST discard envelopes that carry them (PBS-ENV-01 §6; PBS-PRIO-01 §4, §5.1). PBS-LINK `send()` raises `ValueError` for a priority outside 0–4; `parse()` raises `PBSPriorityError` for 5–255 unless `validate_priority=False`.
+Values 5–255 are reserved and MUST NOT be used; receivers MUST discard envelopes that carry them (PBS-ENV-01 §6; PBS-PRIO-01 §4, §5.1). PBS_LINK `send()` raises `ValueError` for a priority outside 0–4; `parse()` raises `PBSPriorityError` for 5–255 unless `validate_priority=False`.
 
 ## 5. Layout Properties
 

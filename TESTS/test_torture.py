@@ -1,5 +1,5 @@
 """
-PBS-LINK Torture Tests
+PBS_LINK Torture Tests
 Validates PBS-ENV-01 v1.3 conformance
 
 Run with: python -m pytest TESTS/test_torture.py -v

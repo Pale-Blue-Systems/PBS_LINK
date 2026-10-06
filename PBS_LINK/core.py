@@ -231,7 +231,7 @@ def verify_crc32(header: bytes) -> bool:
 
 class PBSLink:
     """
-    PBS-LINK Reference SDK
+    PBS_LINK Reference SDK
 
     Implements PBS-ENV-01 v1.3 for sending and receiving PBS envelopes.
     Thread-safe, with optional COBS framing for stream transports.

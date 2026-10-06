@@ -1,8 +1,8 @@
-# PBS-LINK System Integration Guide
+# PBS_LINK System Integration Guide
 
-**Applies to:** PBS-LINK 0.1.1 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
+**Applies to:** PBS_LINK 0.1.1 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.3
 
-This guide defines the interface between an application that uses PBS-LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 lists the requirements a PBS gateway meets, by reference to the PBS specifications.
+This guide defines the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 lists the requirements a PBS gateway meets, by reference to the PBS specifications.
 
 No PBS gateway implementation is published. [PBS-EDGE-ADAPTER-MV](https://github.com/Pale-Blue-Systems/PBS-EDGE-ADAPTER-MV) contains a worked example that encodes one PBS envelope as the payload block of a BPv7 bundle; it does not schedule, store or forward traffic.
 
@@ -31,7 +31,7 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
                                 (optional COBS)                                  (not published)
 ```
 
-| Function | PBS-LINK 0.1.1 | PBS gateway (requirement source) |
+| Function | PBS_LINK 0.1.1 | PBS gateway (requirement source) |
 |----------|----------------|----------------------------------|
 | Build envelope (44-byte header + payload) | `send()`, `build_envelope()` | — |
 | Header CRC-32 | Computed on send; verified by `parse()` | Verify before processing and before forwarding (PBS-ENV-01 §13, §15) |
@@ -44,9 +44,9 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
 
 ---
 
-## 3. PBS-LINK Functions
+## 3. PBS_LINK Functions
 
-All behaviour below is implemented in `PBS_LINK/core.py`.
+All behavior below is implemented in `PBS_LINK/core.py`.
 
 ### 3.1 Building an Envelope: `PBSLink.send()`
 
@@ -94,10 +94,10 @@ TTL is not checked by default. PBS-ENV-01 §14 requires receivers to validate TT
 
 `find_sync(data)` returns `(offset, data[offset:])` for the first offset at which byte 0x10 starts a 44-byte header with a valid CRC-32, or `(-1, data)` if there is none. It restores envelope alignment in an unframed byte stream after data loss.
 
-### 3.4 Limitations of PBS-LINK 0.1.1
+### 3.4 Limitations of PBS_LINK 0.1.1
 
 - No scheduling, queuing, preemption, storage or retransmission.
-- `require_ack=True` sets Flags bit 0 (0x01). PBS-LINK does not wait for, match or retransmit on acknowledgements.
+- `require_ack=True` sets Flags bit 0 (0x01). PBS_LINK does not wait for, match or retransmit on acknowledgements.
 - No segmentation or reassembly. `send()` rejects a payload larger than `max_payload_size` (default 65,536 bytes).
 - The CRC-32 covers the 44-byte header only. Payload integrity is an application function (PBS-ENV-01 §16.2).
 - No cryptographic authentication: neither the PBS-SEC-A-01 §7 extensions nor PBS-SEC-B-01.
@@ -141,7 +141,7 @@ assert alert[0x01] == 0 and alert[0x02] == 0x01  # Priority byte, Flags byte
 
 ### 4.3 Bulk Data Segmentation
 
-PBS-ENV-01 §16.3 directs bulk transfers to be segmented into multiple envelopes and recommends 1–4 KB payloads for memory-constrained embedded devices. PBS-LINK does not segment. The application defines the segment format; the example below carries no reassembly metadata, which a real transfer adds (for example object identifier, byte offset and total length).
+PBS-ENV-01 §16.3 directs bulk transfers to be segmented into multiple envelopes and recommends 1–4 KB payloads for memory-constrained embedded devices. PBS_LINK does not segment. The application defines the segment format; the example below carries no reassembly metadata, which a real transfer adds (for example object identifier, byte offset and total length).
 
 ```python
 image = bytes(range(256)) * 40  # stand-in for a 10,240-byte image
@@ -235,7 +235,7 @@ PBS-DTN-MAP-01 (v1.3, status "Optional (Interoperability)") and PBS-DTN-MAP-02 (
 | Payload block | The complete envelope (44-byte header + payload) SHALL be placed in a single BPv7 payload block, unaltered; the PBS CRC-32 MUST be preserved (§6.2, §6.4) | PBS envelope and semantic frames are carried as BPv7 payload (§2) |
 | Endpoint IDs | Source ID to EID mapping MUST be deterministic within a gateway; the destination EID is configured at the gateway (§8) | The mapping SHALL be deterministic, stable for the mission transaction and SHALL preserve authority scope (§3) |
 | Lifetime | TTL seconds converted to bundle lifetime (§6.1); DTN lifetime expiry MUST result in envelope discard (§7.3) | Bundle lifetime SHALL be selected so that network delivery cannot extend the message beyond its deadline or expiry; for a finite limit the adapter SHALL bound it by the interval remaining at bundle creation (§4) |
-| Priority | Priority classes SHALL map to class of service: Critical and High to Expedited, Normal to Normal, Bulk to Bulk (§6.3) | Priority is preserved unchanged; the mapping profile SHALL document the BP QoS mechanism, queue treatment, congestion behaviour and unavailable-treatment behaviour (§5) |
+| Priority | Priority classes SHALL map to class of service: Critical and High to Expedited, Normal to Normal, Bulk to Bulk (§6.3) | Priority is preserved unchanged; the mapping profile SHALL document the BP QoS mechanism, queue treatment, congestion behavior and unavailable-treatment behavior (§5) |
 | Inbound | DTN-layer validation first; the envelope is extracted verbatim and not modified (§7.1, §7.2) | — |
 | Security | BPSec MAY be added and does not replace the PBS CRC-32 (§6.4) | BPSec SHALL be applied when the network-security profile requires it (§7) |
 

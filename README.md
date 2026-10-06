@@ -1,11 +1,11 @@
-# PBS-LINK: Python Reference SDK for the PBS Envelope
+# PBS_LINK: Python Reference SDK for the PBS Envelope
 
 [![tests](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml?query=branch%3Amain)
 ![Version](https://img.shields.io/badge/version-v0.1.1-blue)
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
-PBS-LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN)). It builds and parses envelopes, optionally frames them with COBS, and writes them to a serial port object.
+PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message envelope of the Pale Blue Systems (PBS) Open Standard ([PBS-PROTOCOL-OPEN](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN)). It builds and parses envelopes, optionally frames them with COBS, and writes them to a serial port object.
 
 | Item | Value |
 |------|-------|
@@ -18,13 +18,13 @@ PBS-LINK is the Python reference implementation of the PBS-ENV-01 v1.3 message e
 
 `pbs-link` is the name pip uses for the distribution. Python code imports `PBS_LINK`: `from PBS_LINK import PBSLink`. `import pbs_link` raises `ModuleNotFoundError`.
 
-PBS-LINK is an endpoint library. It does not schedule, store, retransmit or forward envelopes; [DOCS/INTEGRATION.md](DOCS/INTEGRATION.md) allocates those functions to a gateway.
+PBS_LINK is an endpoint library. It does not schedule, store, retransmit or forward envelopes; [DOCS/INTEGRATION.md](DOCS/INTEGRATION.md) allocates those functions to a gateway.
 
 ---
 
 ## Context
 
-Pale Blue Systems publishes PBS-LINK for a future in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. It does not respond to a current operational failure. It supports experimentation, integration and interoperability testing with an open, inspectable envelope format before connectivity conventions become fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
+Pale Blue Systems publishes PBS_LINK for a future in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. It does not respond to a current operational failure. It supports experimentation, integration and interoperability testing with an open, inspectable envelope format before connectivity conventions become fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
 
 ---
 
@@ -38,16 +38,16 @@ Pale Blue Systems publishes PBS-LINK for a future in which space agencies, comme
 - **Timestamp:** Unix microseconds from `time.time()` or a caller-supplied clock.
 - **Validation:** `parse()` checks Magic, CRC-32, priority, payload length and, optionally, TTL. Each failure raises a specific exception.
 - **Framing:** optional COBS framing (`use_framing=True`) with a 0x00 frame delimiter for byte-stream links.
-- **Resynchronisation:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
+- **Resynchronization:** `find_sync()` locates the next header with a valid CRC-32 in an unframed byte stream.
 - **Dependencies:** none outside the Python standard library.
 
-[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs-link-011) lists the limitations of 0.1.1, including a COBS encoder defect at 254-byte runs.
+[DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-011) lists the limitations of 0.1.1, including a COBS encoder defect at 254-byte runs.
 
 ---
 
 ## Installation
 
-PBS-LINK is not published on PyPI. Install from source:
+PBS_LINK is not published on PyPI. Install from source:
 
 ```bash
 git clone https://github.com/Pale-Blue-Systems/PBS_LINK.git
@@ -76,7 +76,7 @@ print(env.source_id, env.priority_name, env.sequence, env.ack_requested, len(ale
 # Rover-Alpha CRITICAL 1 True 66
 ```
 
-PBS-LINK does not buffer or reorder envelopes. Forwarding order is a gateway function: PBS-PRIO-01 §6 states that higher-priority envelopes SHOULD be forwarded before lower-priority envelopes. `require_ack=True` sets the flag only; PBS-LINK does not wait for an acknowledgement.
+PBS_LINK does not buffer or reorder envelopes. Forwarding order is a gateway function: PBS-PRIO-01 §6 states that higher-priority envelopes SHOULD be forwarded before lower-priority envelopes. `require_ack=True` sets the flag only; PBS_LINK does not wait for an acknowledgement.
 
 ### 2. Bulk Science Data (Priority 4)
 
@@ -136,7 +136,7 @@ python TESTS/doc_examples.py README.md DOCS/INTEGRATION.md DOCS/SPECIFICATIONS.m
 ## System Context
 
 1. **Application.** Calls `PBSLink.send()`, which builds the PBS-ENV-01 envelope.
-2. **Link.** PBS-LINK writes the envelope to `serial_port`. The physical link (UART, RS-422, USB) is outside the SDK.
+2. **Link.** PBS_LINK writes the envelope to `serial_port`. The physical link (UART, RS-422, USB) is outside the SDK.
 
 No PBS gateway implementation is published. The PBS specifications assign these functions to a gateway:
 
@@ -147,7 +147,7 @@ No PBS gateway implementation is published. The PBS specifications assign these 
 
 ## Documentation
 
-- **[DOCS/INTEGRATION.md](DOCS/INTEGRATION.md):** SDK behaviour and limitations, application patterns, and the gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02.
+- **[DOCS/INTEGRATION.md](DOCS/INTEGRATION.md):** SDK behavior and limitations, application patterns, and the gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02.
 - **[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md):** header byte layout, CRC-32 parameters and a test vector.
 - **[WHY-NOW.md](WHY-NOW.md):** rationale for publishing now.
 

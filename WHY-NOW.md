@@ -1,6 +1,6 @@
-# Why Now: Context for PBS-LINK
+# Why Now: Context for PBS_LINK
 
-PBS-LINK addresses one question: how independently operated systems exchange data predictably across disrupted, delayed and heterogeneous space networks.
+PBS_LINK addresses one question: how independently operated systems exchange data predictably across disrupted, delayed and heterogeneous space networks.
 
 No current networking failure drives this work. The motivation is the number and diversity of communication paths in planned space architectures.
 
@@ -25,7 +25,7 @@ When connectivity is fragmented:
 
 - assumptions about latency, availability and control differ between systems;
 - tightly coupled systems fail when those assumptions do not hold;
-- link behaviour becomes an implicit policy decision instead of an explicit design choice.
+- link behavior becomes an implicit policy decision instead of an explicit design choice.
 
 Without a defined abstraction at the link layer, this complexity moves into applications and operations.
 
@@ -56,4 +56,4 @@ This repository exists to:
 
 ## Summary
 
-PBS-LINK is published now because planned space networks are heterogeneous, intermittent and shared by independent operators (LNIS V005 §1, §3.1). Defining link behaviour before those networks are fixed keeps higher-level systems adaptable as they evolve.
+PBS_LINK is published now because planned space networks are heterogeneous, intermittent and shared by independent operators (LNIS V005 §1, §3.1). Defining link behavior before those networks are fixed keeps higher-level systems adaptable as they evolve.

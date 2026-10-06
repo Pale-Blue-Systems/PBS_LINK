@@ -1,5 +1,5 @@
 """
-PBS-LINK: Pale Blue Systems Reference SDK
+PBS_LINK: Pale Blue Systems Reference SDK
 Implements PBS-ENV-01 v1.3 (44-Byte Header)
 """
 
