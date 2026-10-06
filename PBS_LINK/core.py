@@ -259,12 +259,17 @@ class PBSLink:
         Initialize PBSLink.
 
         Args:
-            device_id: 16-character device identifier (truncated if longer)
-            serial_port: Optional serial port object with read()/write() methods
-            max_payload_size: Maximum allowed payload size in bytes (default 64KB)
+            device_id: Source identifier. The first 16 characters are encoded
+                       as UTF-8 and truncated to 16 bytes (Source ID field).
+            serial_port: Optional object with write() (and read() for
+                         receive()). If None, send() returns the packet bytes.
+            max_payload_size: Maximum allowed payload size in bytes
+                              (default 65536)
             use_framing: If True, use COBS framing for packet delimiting
-            clock_source: Optional callable returning Unix timestamp in seconds
-                         (default: time.time). Use for custom clocks (GPS, MET).
+            clock_source: Optional callable returning Unix time in seconds
+                         (default: time.time). PBS-ENV-01 defines Timestamp
+                         as Unix epoch time; convert other time scales
+                         (GPS time, mission elapsed time) before returning.
         """
         self.device_id = str(device_id)[:16]
         self.serial_port = serial_port
