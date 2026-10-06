@@ -1,8 +1,8 @@
 """
-Pale Blue Systems - Reference SDK (v0.1.1 Beta)
+Pale Blue Systems - Reference SDK (v0.1.2 Beta)
 Implements: PBS-ENV-01 v1.3 (44-Byte Header)
 License: Apache 2.0
-Copyright 2026 Pale Blue Systems
+Copyright 2026 Pale Blue Systems Foundation
 """
 import struct
 import time
@@ -163,7 +163,9 @@ class COBSFraming:
             block_len = idx - block_start
             output.append(block_len + 1)
             output.extend(data[block_start:idx])
-            if idx < len(data) and data[idx] == 0x00:
+            # Code 0xFF (a full 254-byte block) carries no implicit zero, so
+            # a 0x00 that follows it starts the next block and is not consumed.
+            if block_len < 254 and idx < len(data) and data[idx] == 0x00:
                 idx += 1
 
         # If data ended with a zero, add terminating code byte
@@ -231,7 +233,7 @@ def verify_crc32(header: bytes) -> bool:
 
 class PBSLink:
     """
-    PBS-LINK Reference SDK
+    PBS_LINK Reference SDK
 
     Implements PBS-ENV-01 v1.3 for sending and receiving PBS envelopes.
     Thread-safe, with optional COBS framing for stream transports.
@@ -259,12 +261,17 @@ class PBSLink:
         Initialize PBSLink.
 
         Args:
-            device_id: 16-character device identifier (truncated if longer)
-            serial_port: Optional serial port object with read()/write() methods
-            max_payload_size: Maximum allowed payload size in bytes (default 64KB)
+            device_id: Source identifier. The first 16 characters are encoded
+                       as UTF-8 and truncated to 16 bytes (Source ID field).
+            serial_port: Optional object with write() (and read() for
+                         receive()). If None, send() returns the packet bytes.
+            max_payload_size: Maximum allowed payload size in bytes
+                              (default 65536)
             use_framing: If True, use COBS framing for packet delimiting
-            clock_source: Optional callable returning Unix timestamp in seconds
-                         (default: time.time). Use for custom clocks (GPS, MET).
+            clock_source: Optional callable returning Unix time in seconds
+                         (default: time.time). PBS-ENV-01 defines Timestamp
+                         as Unix epoch time; convert other time scales
+                         (GPS time, mission elapsed time) before returning.
         """
         self.device_id = str(device_id)[:16]
         self.serial_port = serial_port

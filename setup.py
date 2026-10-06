@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="pbs-link",
-    version="0.1.1",
+    version="0.1.2",
     description="Reference SDK for the Pale Blue Systems Protocol (PBS-ENV-01 v1.3)",
-    author="Pale Blue Systems",
+    author="Pale Blue Systems Foundation",
     url="https://github.com/Pale-Blue-Systems/PBS_LINK",
     packages=find_packages(),
     install_requires=[],
@@ -14,5 +14,5 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )
