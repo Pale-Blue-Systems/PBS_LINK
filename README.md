@@ -50,7 +50,7 @@ pip install .
 Critical messages (P0) bypass all other traffic in the buffer.
 
 ```python
-from pbs_link import PBSLink
+from PBS_LINK import PBSLink
 
 # Initialize connection to the gateway (e.g., UART on /dev/ttyS0)
 # For testing, you can omit the port to print bytes to console.

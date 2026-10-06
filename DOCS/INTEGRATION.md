@@ -22,7 +22,7 @@ The Pale Blue Systems network uses a "Store-and-Forward" architecture designed f
 For routine health checks, use a standard loop. Set a short TTL so old health data doesn't clog the buffer if the link goes down.
 
 ```python
-from pbs_link import PBSLink
+from PBS_LINK import PBSLink
 import time
 
 link = PBSLink("/dev/ttyS0")
