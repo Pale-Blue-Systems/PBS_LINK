@@ -103,6 +103,7 @@ Values 5–255 are reserved and MUST NOT be used; receivers MUST discard envelop
 
 - Fixed offsets: the header has no variable-length fields.
 - Natural alignment: each multi-byte field starts at an offset that is a multiple of its size (u16 at 0x04 and 0x06; u64 at 0x18; u32 at 0x20, 0x24 and 0x28). A header stored at an 8-byte-aligned address permits a naturally aligned load of every field.
+- **Aligned Access (design target):** All 4-byte integers (Size, TTL, CRC32) start on 4-byte boundaries. This prevents alignment faults on strict embedded processors (ARM Cortex-M, RISC-V).
 - Loss detection: a gap in the Sequence values from one Source ID identifies lost envelopes (PBS-ENV-01 §8).
 - Expiry: an envelope with TTL > 0 is expired when `current_time − Timestamp / 10^6 > TTL`, with `current_time` in Unix seconds (PBS-ENV-01 §12.2). An envelope with TTL 0 never expires (§12.1). Relays and gateways do not modify TTL or any other header field, so every node computes the same expiry instant (§12.3, §15).
 

@@ -1,4 +1,6 @@
-# PBS_LINK: Python Reference SDK for the PBS Envelope
+# PBS_LINK: Lunar Surface Communication SDK
+
+**Python Reference SDK for the PBS Envelope**
 
 [![tests](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Pale-Blue-Systems/PBS_LINK/actions/workflows/tests.yml?query=branch%3Amain)
 ![Version](https://img.shields.io/badge/version-v0.1.4-blue)
@@ -19,6 +21,12 @@ PBS_LINK is the Python reference implementation of the PBS-ENV-01 v1.5 message e
 `pbs-link` is the name pip uses for the distribution. Python code imports `PBS_LINK`: `from PBS_LINK import PBSLink`. `import pbs_link` raises `ModuleNotFoundError`.
 
 PBS_LINK is an endpoint library. It does not schedule, store, retransmit or forward envelopes; [DOCS/INTEGRATION.md](DOCS/INTEGRATION.md) allocates those functions to a gateway.
+
+Pale Blue Systems is building the PBS network and its PBS Gateway ([Planned Architecture](#planned-architecture-in-development)). **pbs-link** is the official Python Reference SDK for the **Pale Blue Systems (PBS)** network.
+
+It allows any device—from a university rover to a commercial mining drill—to package telemetry and alerts into the **PBS-ENV-01** standard. This ensures your data can be routed, prioritized, and delivered reliably across high-latency, disruption-prone lunar and deep-space environments.
+
+> **Note:** This is the *Client SDK* (Python). It connects to any standard-compliant PBS Gateway.
 
 ---
 
@@ -43,6 +51,12 @@ The Pale Blue Systems Foundation publishes PBS_LINK for planned architectures in
 
 [DOCS/INTEGRATION.md §3.4](DOCS/INTEGRATION.md#34-limitations-of-pbs_link-014) lists the limitations of 0.1.4, including the per-instance sequence counter. [CHANGELOG.md](CHANGELOG.md) records the changes in each version.
 
+### PBS Network Features (in development)
+
+* **PBS-ENV-01 Compliance:** Generates the standard 44-byte binary header required by PBS Gateways.
+* **Space-Grade Reliability (design target):** Includes CRC32 header integrity checks, sequence tracking (0–65535) and payload protection (PBS-SEC-B-01 or an application-level check, PBS-ENV-01 §16.2) to detect packet loss and radiation-related corruption.
+* **Transport Agnostic:** Designed to operate over any serial stream (UART, RS-422, USB) connected to a PBS Gateway.
+
 ---
 
 ## Installation
@@ -59,15 +73,21 @@ pip install .
 
 ## Quick Start
 
-With `serial_port=None`, `send()` returns the envelope bytes instead of writing them.
+With `serial_port=None`, `send()` returns the envelope bytes instead of writing them. Where these examples refer to the gateway, the buffer or retries, they describe the concept of operations of the PBS Gateway that Pale Blue Systems is building ([Planned Architecture](#planned-architecture-in-development)).
 
 ### 1. Critical Alert (Priority 0)
+
+Critical messages (P0) bypass all other traffic in the buffer.
 
 ```python
 from PBS_LINK import PBSLink, Priority, parse_envelope
 
+# Initialize connection to the gateway (e.g., UART on /dev/ttyS0)
+# For testing, you can omit the port to print bytes to console.
 link = PBSLink(device_id="Rover-Alpha", serial_port=None)
 
+# Send a "Critical" alert.
+# ttl=0 means "Never Expire" (keep retrying indefinitely).
 # CRITICAL, never expires (TTL 0), acknowledgement requested (Flags 0x01).
 alert = link.send(priority=Priority.CRITICAL, payload="ERR: WHEEL_MOTOR_STALL", ttl=0, require_ack=True)
 
@@ -80,7 +100,11 @@ PBS_LINK does not buffer or reorder envelopes. Forwarding order is a gateway fun
 
 ### 2. Bulk Science Data (Priority 4)
 
+Bulk data (P4) is sent only when bandwidth is available. A TTL ensures outdated data does not consume capacity indefinitely.
+
 ```python
+# Send a temperature log.
+# ttl=60 means "If not sent within 60 seconds, drop this packet."
 # BULK: PBS-ENV-01 §12.1 requires a gateway to discard it once more than 60 s have elapsed since its Timestamp.
 telemetry = link.send(priority=Priority.BULK, payload="Temp: -40C, Rad: 12mSv", ttl=60)
 ```
@@ -145,9 +169,32 @@ No PBS gateway implementation is published. The PBS specifications assign these 
 
 ---
 
+## Planned Architecture (in development)
+
+Pale Blue Systems is building the PBS Gateway as a hardware module, PBS-FRU-01, that each rover carries on its serial link. The module hosts the rover's own ION bundle protocol agent node. [DOCS/INTEGRATION.md §2.1](DOCS/INTEGRATION.md#21-planned-architecture-in-development) describes the planned data pipeline.
+
+The PBS ecosystem bridges the gap between simple local application code and deep-space communication protocols.
+
+1. **Your Code (Python)**  
+   Generates a PBS-ENV-01–compliant packet using this SDK.
+
+2. **The Physical Link**  
+   The SDK wraps the payload in the PBS-ENV-01 header and transmits it over a serial interface (UART, USB, etc.) to a PBS Gateway.
+
+3. **The PBS Gateway**  
+   The gateway buffers and manages packets locally, handling:
+   * Fragmentation to fit radio frames, in the bundle and radio-link layers below PBS; each PBS envelope is carried whole in one bundle (PBS-DTN-MAP-01 §5.1)
+   * Preemption when higher-priority traffic arrives
+   * Storage during link outages
+
+4. **The Uplink**  
+   The gateway encapsulates messages into **CCSDS Bundle Protocol (BPv7)** packets and routes them through lunar, cislunar, or deep-space infrastructure toward Earth.
+
+---
+
 ## Documentation
 
-- **[DOCS/INTEGRATION.md](DOCS/INTEGRATION.md):** SDK behavior and limitations, application patterns, and the gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02.
+- **[DOCS/INTEGRATION.md](DOCS/INTEGRATION.md) (System Integration Guide):** SDK behavior and limitations, application patterns, and the gateway requirements of PBS-ENV-01, PBS-PRIO-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01 and PBS-DTN-MAP-02. For the PBS Gateway in development, it also covers data flow, gateway behavior, and compatibility with NASA deep-space communication architectures.
 - **[DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md):** header byte layout, CRC-32 parameters and a test vector.
 - **[WHY-NOW.md](WHY-NOW.md):** rationale for publishing now.
 
@@ -172,6 +219,29 @@ All multi-byte fields are big-endian.
 | 0x28 | CRC32 | `u32` | CRC-32 of bytes 0x00–0x2B with 0x28–0x2B set to zero |
 
 [DOCS/SPECIFICATIONS.md](DOCS/SPECIFICATIONS.md) gives the CRC-32 parameters and a test vector. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.5 (PBS v1.5.0, 2026-10-06).
+
+---
+
+## Building Your Own Gateway
+
+The PBS-ENV-01 standard is **open**, and `pbs-link` is the reference Python client implementation.
+
+You are encouraged to build your own gateway or client implementations.
+
+### Compliance Requirements
+
+To ensure interoperability, implementations must satisfy:
+
+1. **Bit-Level Compliance**  
+   Strict adherence to the PBS-ENV-01 specification.
+
+2. **Behavioral Compliance**
+   * MUST drop packets with expired TTL.
+   * MUST validate CRC32 before processing.
+   * MUST NOT modify reserved fields.
+
+3. **Conformance**  
+   The PBS Core requirements under [Conformance](#conformance), including the relay and gateway rules of PBS-ENV-01 §15 and PBS-CONFORMANCE-01 §8.
 
 ---
 
