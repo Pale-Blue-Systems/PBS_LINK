@@ -2,6 +2,8 @@
 
 **Applies to:** PBS_LINK 0.1.4 (pip distribution `pbs-link`, import package `PBS_LINK`), PBS-ENV-01 v1.5 (PBS v1.5.0)
 
+This guide details how data flows from your user application, through the PBS Hardware, and into the Deep Space Network (DSN). Pale Blue Systems is building the PBS Hardware, the PBS-FRU-01 PBS Gateway module: section 2.1 describes its planned architecture, sections 4.2 and 4.3 its concept of operations, and section 5.5.1 its planned DSN compatibility.
+
 This guide describes the interface between an application that uses PBS_LINK and a PBS gateway. Sections 2 and 3 describe what the SDK does. Section 4 shows application patterns. Section 5 restates, by reference to the PBS specifications, the requirements that apply to a conformant PBS gateway.
 
 No PBS gateway implementation is published. [PBS-EDGE-ADAPTER-MV](https://github.com/Pale-Blue-Systems/PBS-EDGE-ADAPTER-MV) contains a worked example that encodes one PBS envelope as the payload block of a BPv7 bundle; it does not schedule, store or forward traffic.
@@ -45,6 +47,24 @@ application --PBSLink.send()--> envelope bytes --serial_port.write()--> link -->
 | Acknowledgement | Sets Flags bit 0 only | PBS-ENV-01 §7 defines the flag only; PBS-SVC-01 §8 defines acknowledgement policy for Service Intent |
 | Header forwarding | None | Forward the 44 header bytes as received; modify no header field, TTL and CRC-32 included (PBS-ENV-01 §12.3, §15; PBS-CONFORMANCE-01 §8) |
 | BPv7 encapsulation | None | PBS-DTN-MAP-01 or PBS-DTN-MAP-02 at DTN boundaries |
+
+### 2.1 Planned Architecture (in development)
+
+Pale Blue Systems is building the PBS Gateway as a hardware module, PBS-FRU-01, that each rover carries on its serial link. The module hosts the rover's own ION bundle protocol agent node, which creates the bundles that carry the rover's envelopes (section 5.5.1).
+
+#### System Architecture
+
+The Pale Blue Systems network uses a "Store-and-Forward" architecture designed for high-latency, disrupted environments (DTN).
+
+#### The Data Pipeline
+
+1.  **User Space (Python SDK):** Your rover code generates a data payload and assigns it a Priority (P0-P4).
+2.  **The Physical Link (UART):** The SDK wraps the data in the **PBS-ENV-01** header and transmits it over serial to the PBS-FRU-01 Module.
+3.  **The PBS Gateway:** The module buffers the packet locally. It handles:
+    * **Fragmentation:** Slicing large packets to fit into radio frames, in the bundle and radio-link layers below PBS; each PBS envelope is carried whole in one bundle (PBS-DTN-MAP-01 §5.1).
+    * **Preemption:** Pausing "Bulk" uploads when "Critical" alerts arrive.
+    * **Data Durability:** Storing data in non-volatile memory during radiation events.
+4.  **The Uplink (NASA ION):** The Gateway encapsulates the message into a **CCSDS Bundle Protocol (BPv7)** packet and routes it via the Lunar Gateway to Earth.
 
 ---
 
@@ -147,6 +167,14 @@ alert = link.send(Priority.CRITICAL, "WHEEL_STUCK_ERROR", ttl=0, require_ack=Tru
 assert alert[0x01] == 0 and alert[0x02] == 0x01  # Priority byte, Flags byte
 ```
 
+**Concept of operations (PBS Gateway, in development).** For safety-critical events (P0), use `ttl=0` (Never Expire) and request an ACK.
+
+```python
+# P0 = Critical. This will jump to the front of the queue immediately.
+# ttl=0 means "Keep trying forever until confirmed."
+link.send(0, "WHEEL_STUCK_ERROR", ttl=0, require_ack=True)
+```
+
 ### 4.3 Bulk Data Segmentation
 
 PBS-ENV-01 §16.3 recommends segmenting bulk transfers into multiple envelopes and 1–4 KB payloads for memory-constrained embedded devices. PBS_LINK does not segment. The application defines the segment format; the example below carries no reassembly metadata, which a real transfer adds (for example object identifier, byte offset and total length).
@@ -160,6 +188,10 @@ packets = [link.send(Priority.BULK, seg, ttl=86_400) for seg in segments]
 
 assert [len(p) - 44 for p in packets] == [4096, 4096, 2048]
 ```
+
+**Concept of operations (PBS Gateway, in development).** When sending images or logs (P4), allow the SDK to handle the packet. The PBS Hardware will automatically "drip feed" this data to the Gateway when bandwidth is available.
+
+* **Note:** The PBS Gateway enforces a "Fair Use" policy. P4 traffic may be paused for hours during high-traffic windows (e.g., Crewed Missions).
 
 ### 4.4 Payload Integrity
 
@@ -330,3 +362,15 @@ assert max_bundle_lifetime_ms(stamped_us, 60, created - 15_000) == 60_000
 ### 5.5 NASA Deep Space Network
 
 PBS-PRIO-01 §14 distinguishes DSN antenna scheduling (ground-scheduled, hours to days ahead) from PBS packet scheduling within an allocated link. Its §14.2 table relating DSN scheduling priority levels 1–7 to PBS classes 0–4 is informative, and implementations MAY define mission-specific mappings. PBS priority values MUST remain as defined in PBS-PRIO-01 §4 (§14.2).
+
+#### 5.5.1 NASA DSN Compatibility (planned, in development)
+
+Pale Blue Systems is building the PBS Gateway to these design targets.
+
+All data egressing the PBS Gateway is compliant with **BPv7 ([RFC 9171](https://www.rfc-editor.org/rfc/rfc9171))**; the design target is the CCSDS profile of BPv7, **CCSDS 734.2-P-1.1** (draft Recommended Standard), which LNIS V005 §3.1.2 cites as applicable document [AD19].
+
+* **Source EID:** `ipn:99.[Your_Rover_ID]`
+
+Each rover runs its own ION bundle protocol agent node, hosted by its PBS-FRU-01 module (section 2.1). The source EID is therefore an endpoint of the node whose bundle protocol agent creates the bundle, as RFC 9171 §5.2 requires.
+
+You do not need to implement the Bundle Protocol. The PBS Hardware handles the encapsulation.
