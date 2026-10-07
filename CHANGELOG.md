@@ -2,6 +2,33 @@
 
 All notable changes to PBS_LINK (pip distribution `pbs-link`, import package `PBS_LINK`) are recorded here. Versions follow semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- Documentation restores the planned PBS network material, labelled as planned or as design targets: the PBS Gateway hardware module PBS-FRU-01, which hosts each rover's own ION bundle protocol agent node, and its data pipeline (README "Planned Architecture (in development)", `DOCS/INTEGRATION.md` §2.1); the concept of operations for periodic telemetry, critical and bulk traffic, including the 4 KB segment warning and the PBS Gateway "Fair Use" policy (README Quick Start, `DOCS/INTEGRATION.md` §4.1 to §4.3); NASA DSN compatibility and the per-rover source EID (`DOCS/INTEGRATION.md` §5.4 and §5.5.1); the README "Building Your Own Gateway" section and network feature targets; the alignment design target (`DOCS/SPECIFICATIONS.md` §5); and the `WHY-NOW.md` rationale. The restored text follows PBS v1.5.0: radio-frame fragmentation takes place in the bundle and radio-link layers and each envelope is carried whole in one bundle (PBS-DTN-MAP-01 §5.1); egress conformance is stated as BPv7 (RFC 9171), with the CCSDS BPv7 profile, CCSDS 734.2-P-1.1, as a design target, in place of CCSDS 734.2-B-1, a BPv6 profile; payload protection (PBS-SEC-B-01 or an application-level check) is named because the CRC-32 covers the header only (PBS-ENV-01 §16.2); the telemetry TTL is stated as a lifetime counted from Timestamp, not as time spent in a buffer (PBS-ENV-01 §12.1).
+- Documentation restores, as originally written: the README "Context and Intent" paragraphs (README "Context"); the Basic Telemetry polling loop with its buffer-residence TTL comment (`DOCS/INTEGRATION.md` §4.1, as a listing that `TESTS/doc_examples.py` does not execute, because the loop does not end); and the destination EID `ipn:23.1` (Mission Control Earth) (`DOCS/INTEGRATION.md` §5.5.1).
+- Documentation restores, as originally written, the statement that all data egressing the PBS Gateway is compliant with CCSDS Blue Book 734.2-B-1 (`DOCS/INTEGRATION.md` §5.5.1). It stands next to the BPv7 (RFC 9171) statement and the CCSDS 734.2-P-1.1 design target.
+
+## [0.1.4] - 2026-10-06
+
+### Fixed
+
+- `receive()` returned expired envelopes. PBS-ENV-01 v1.5 Section 12.2 requires every receiver to check TTL expiration on receipt. `receive()` now applies the check on the unframed and framed paths: an envelope with TTL > 0 for which `clock_source() − Timestamp / 10^6 > TTL` raises `PBSTTLError`. The envelope has been read in full when the exception is raised, so the unframed stream stays aligned and an expired frame is consumed like any other invalid frame. An envelope with TTL 0 never expires (Section 12.1).
+- The TTL check read `time.time()` when no `current_time` was passed and ignored the `clock_source` given to `PBSLink`. It now reads `clock_source()`.
+- `parse(check_ttl=True, current_time=0.0)` treated 0.0 as unset and read the clock. It now uses 0.0.
+
+### Changed
+
+- `receive()` raises `PBSTTLError` for an expired envelope. Code that needs expired envelopes calls `receive(check_ttl=False)`. The check compares the link's `clock_source` with Timestamp; an error in that clock shifts each expiry decision by the same amount.
+- Documentation follows PBS v1.5.0 (2026-10-06): PBS-ENV-01, PBS-SEC-A-01, PBS-CONFORMANCE-01, PBS-DTN-MAP-01, PBS-DTN-MAP-02 and PBS-SEC-B-01 are v1.5. README and `DOCS/INTEGRATION.md` §5.1 and §5.3 state the v1.5 relay and gateway rules: no header field, TTL and CRC-32 included, is modified in transit; the 44 header bytes are forwarded as received; expiry is checked against the unchanged Timestamp and TTL; an envelope with TTL 0 is never discarded as TTL-expired. `DOCS/INTEGRATION.md` §5.4 and §5.4.1 state the PBS-DTN-MAP-01 v1.5 lifetime (Sections 6.1 and 6.1.1), priority (Section 6.3) and TTL (Section 7.3) rules and the PBS-DTN-MAP-02 v1.5 Section 4 no-expiry lifetime.
+
+### Added
+
+- `receive(check_ttl=True)` parameter.
+- `TESTS/test_torture.py::TestReceiveExpiry`: 8 tests covering expired unframed and framed receive, `check_ttl=False`, an unexpired envelope at an age equal to TTL, the receiver's `clock_source`, `current_time=0.0`, TTL 0, and the PBS-ENV-01 Section 12.5 TTL 30 case. Each fails with its fix reverted. 76 tests.
+- `DOCS/INTEGRATION.md` §4.6 and `DOCS/SPECIFICATIONS.md` §6: executable examples of the expiry check; §6 reproduces the PBS-ENV-01 Section 12.5 test cases (CRC-32 `0x588721ED`, `0xCDE710AF`, `0x8757080E`).
+
 ## [0.1.3] - 2026-10-06
 
 ### Fixed

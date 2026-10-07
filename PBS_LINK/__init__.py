@@ -1,6 +1,6 @@
 """
 PBS_LINK: Pale Blue Systems Reference SDK
-Implements PBS-ENV-01 v1.3 (44-Byte Header)
+Implements PBS-ENV-01 v1.5 (44-Byte Header)
 """
 
 from .core import (
@@ -38,7 +38,7 @@ from .core import (
     MAX_PAYLOAD_SIZE_DEFAULT,
 )
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __author__ = "Pale Blue Systems Foundation"
 __license__ = "Apache 2.0"
 

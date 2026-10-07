@@ -1,6 +1,6 @@
-# PBS-ENV-01 v1.3 Envelope Header: PBS_LINK Implementation Reference
+# PBS-ENV-01 v1.5 Envelope Header: PBS_LINK Implementation Reference
 
-This document summarizes the PBS-ENV-01 v1.3 header as PBS_LINK 0.1.3 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.3 as corrected by the PBS v1.4.1 errata (2026-10-06), in PBS-PROTOCOL-OPEN. Where this summary and the specification differ, the specification controls.
+This document summarizes the PBS-ENV-01 v1.5 header as PBS_LINK 0.1.4 implements it in `PBS_LINK/core.py`. The normative text is [PBS-ENV-01](https://github.com/Pale-Blue-Systems/PBS-PROTOCOL-OPEN/blob/main/PBS-RFC-LIB/PBS-ENV-01.md) v1.5 (PBS v1.5.0, 2026-10-06), in PBS-PROTOCOL-OPEN. The header layout is unchanged since v1.3. Where this summary and the specification differ, the specification controls.
 
 ## 1. Encoding
 
@@ -55,7 +55,7 @@ Receiver (PBS-ENV-01 §13.1):
 3. Compute the CRC-32 over all 44 bytes.
 4. Discard the envelope if the computed value differs from the extracted value.
 
-Before the PBS v1.4.1 errata (2026-10-06), five clauses gave the CRC input as bytes 0x00–0x27: the PBS-ENV-01 §4 field table, PBS-SEC-A-01 §4.1 step 3 and §5.1 step 2, and PBS-CONFORMANCE-01 §4.3 and §5.1. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS_LINK 0.1.3 implements the 44-byte rule.
+Before the PBS v1.4.1 errata (2026-10-06), five clauses gave the CRC input as bytes 0x00–0x27: the PBS-ENV-01 §4 field table, PBS-SEC-A-01 §4.1 step 3 and §5.1 step 2, and PBS-CONFORMANCE-01 §4.3 and §5.1. A CRC-32 computed over those 40 bytes does not verify under the rule above. PBS_LINK 0.1.4 implements the 44-byte rule.
 
 The CRC-32 detects corruption. It does not detect deliberate modification (PBS-SEC-A-01 §3.3).
 
@@ -103,5 +103,42 @@ Values 5–255 are reserved and MUST NOT be used; receivers MUST discard envelop
 
 - Fixed offsets: the header has no variable-length fields.
 - Natural alignment: each multi-byte field starts at an offset that is a multiple of its size (u16 at 0x04 and 0x06; u64 at 0x18; u32 at 0x20, 0x24 and 0x28). A header stored at an 8-byte-aligned address permits a naturally aligned load of every field.
+- **Aligned Access (design target):** All 4-byte integers (Size, TTL, CRC32) start on 4-byte boundaries. This prevents alignment faults on strict embedded processors (ARM Cortex-M, RISC-V).
 - Loss detection: a gap in the Sequence values from one Source ID identifies lost envelopes (PBS-ENV-01 §8).
-- Expiry: an envelope with TTL > 0 is expired when `current_time − Timestamp / 10^6 > TTL`, with `current_time` in Unix seconds (PBS-ENV-01 §12.2).
+- Expiry: an envelope with TTL > 0 is expired when `current_time − Timestamp / 10^6 > TTL`, with `current_time` in Unix seconds (PBS-ENV-01 §12.2). An envelope with TTL 0 never expires (§12.1). Relays and gateways do not modify TTL or any other header field, so every node computes the same expiry instant (§12.3, §15).
+
+## 6. TTL Test Cases
+
+PBS-ENV-01 §12.5 gives TTL test cases built on the Section 3.1 header (Timestamp T = 2026-01-01T00:00:00Z). PBS_LINK `receive()` applies the §12.2 check with the receiver's `clock_source` and raises `PBSTTLError` for an expired envelope:
+
+```python
+import io
+from PBS_LINK import PBSTTLError
+
+T = 1_767_225_600.0
+
+def header(ttl):
+    return PBSLink(device_id="Rover-A", clock_source=lambda: T).send(
+        Priority.CRITICAL, b"", ttl=ttl, require_ack=True)
+
+def expired_at(packet, now):
+    rx = PBSLink(device_id="RX", serial_port=io.BytesIO(packet), clock_source=lambda: now)
+    try:
+        rx.receive()
+    except PBSTTLError:
+        return True
+    return False
+
+# TTL 30, forwarded with all 44 header bytes unchanged: accepted at T+30 s, expired at T+31 s.
+assert header(30)[0x28:].hex() == "588721ed"
+assert not expired_at(header(30), T + 30)
+assert expired_at(header(30), T + 31)
+
+# TTL reduced to 10 by a relay that subtracted 20 s of storage: expired on receipt at T+26 s.
+assert header(10)[0x28:].hex() == "cde710af"
+assert expired_at(header(10), T + 26)
+
+# TTL 0: never expired, here 365 days after Timestamp.
+assert header(0)[0x28:].hex() == "8757080e"
+assert not expired_at(header(0), T + 365 * 86_400)
+```
