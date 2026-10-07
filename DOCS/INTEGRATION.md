@@ -158,6 +158,13 @@ for _ in range(3):  # flight software runs this loop until shutdown
 print("last sequence number:", link.sequence)  # 3
 ```
 
+**Concept of operations (PBS Gateway, in development).** For routine health checks, use a standard loop. Set a short TTL so old health data doesn't clog the buffer if the link goes down.
+
+```python
+# TTL=60s: if more than 1 min has passed since its Timestamp, the gateway drops it.
+link.send(2, "Battery: 98%", ttl=60)
+```
+
 ### 4.2 Critical Alert
 
 CRITICAL (0) is the highest class (PBS-PRIO-01 §4). `ttl=0` means the envelope never expires (PBS-ENV-01 §12.1). `require_ack=True` sets Flags bit 0. Forwarding order is a gateway function: higher-priority envelopes SHOULD be forwarded first (PBS-PRIO-01 §6), and a gateway MAY preempt a lower-priority transmission (PBS-PRIO-01 §6.1).
@@ -191,6 +198,7 @@ assert [len(p) - 44 for p in packets] == [4096, 4096, 2048]
 
 **Concept of operations (PBS Gateway, in development).** When sending images or logs (P4), allow the SDK to handle the packet. The PBS Hardware will automatically "drip feed" this data to the Gateway when bandwidth is available.
 
+* **Warning:** Do not send large files as a single string. Chunk them into 4KB segments.
 * **Note:** The PBS Gateway enforces a "Fair Use" policy. P4 traffic may be paused for hours during high-traffic windows (e.g., Crewed Missions).
 
 ### 4.4 Payload Integrity
@@ -323,6 +331,8 @@ Source ID       ->  DTN source EID (example)
 "Rover-Alpha"   ->  ipn:99.1
 "Drill-01"      ->  ipn:99.2
 ```
+
+In the planned PBS architecture each rover's PBS-FRU-01 module hosts the rover's own ION bundle protocol agent node, so the source EID is an endpoint of that rover's own node (sections 2.1 and 5.5.1; RFC 9171 §5.2).
 
 #### 5.4.1 Lifetime Bound
 
