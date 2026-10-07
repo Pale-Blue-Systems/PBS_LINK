@@ -2,6 +2,12 @@
 
 All notable changes to PBS_LINK (pip distribution `pbs-link`, import package `PBS_LINK`) are recorded here. Versions follow semantic versioning.
 
+## [Unreleased]
+
+### Changed
+
+- Documentation restores the planned PBS network material, labelled as planned or as design targets: the PBS Gateway hardware module PBS-FRU-01, which hosts each rover's own ION bundle protocol agent node, and its data pipeline (README "Planned Architecture (in development)", `DOCS/INTEGRATION.md` §2.1); the concept of operations for critical and bulk traffic, including the PBS Gateway "Fair Use" policy (README Quick Start, `DOCS/INTEGRATION.md` §4.2 and §4.3); NASA DSN compatibility and the per-rover source EID (`DOCS/INTEGRATION.md` §5.5.1); the README "Building Your Own Gateway" section and network feature targets; the alignment design target (`DOCS/SPECIFICATIONS.md` §5); and the `WHY-NOW.md` rationale. The restored text follows PBS v1.5.0: radio-frame fragmentation takes place in the bundle and radio-link layers and each envelope is carried whole in one bundle (PBS-DTN-MAP-01 §5.1); egress conformance is stated as BPv7 (RFC 9171), with the CCSDS BPv7 profile, CCSDS 734.2-P-1.1, as a design target, in place of CCSDS 734.2-B-1, a BPv6 profile; payload protection (PBS-SEC-B-01 or an application-level check) is named because the CRC-32 covers the header only (PBS-ENV-01 §16.2).
+
 ## [0.1.4] - 2026-10-06
 
 ### Fixed
