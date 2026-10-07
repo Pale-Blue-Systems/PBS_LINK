@@ -389,6 +389,8 @@ PBS-PRIO-01 §14 distinguishes DSN antenna scheduling (ground-scheduled, hours t
 
 Pale Blue Systems is building the PBS Gateway to these design targets.
 
+All data egressing the PBS Gateway is compliant with **CCSDS Blue Book 734.2-B-1**.
+
 All data egressing the PBS Gateway is compliant with **BPv7 ([RFC 9171](https://www.rfc-editor.org/rfc/rfc9171))**; the design target is the CCSDS profile of BPv7, **CCSDS 734.2-P-1.1** (draft Recommended Standard), which LNIS V005 §3.1.2 cites as applicable document [AD19].
 
 * **Source EID:** `ipn:99.[Your_Rover_ID]`
