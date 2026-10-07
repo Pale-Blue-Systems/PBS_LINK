@@ -172,6 +172,8 @@ while True:
     time.sleep(10)
 ```
 
+The listing above is shown as originally written. It is not part of the runnable sequence of section 4. In PBS_LINK 0.1.4 the first argument is `device_id`, so `PBSLink("/dev/ttyS0")` sets the Source ID to "/dev/ttyS0" and opens no port; to write to a port, pass an object with a `write()` method as `serial_port=`, for example `serial.Serial("/dev/ttyS0", 115200)`.
+
 ```python
 # TTL=60s: if more than 1 min has passed since its Timestamp, the gateway drops it.
 link.send(2, "Battery: 98%", ttl=60)
