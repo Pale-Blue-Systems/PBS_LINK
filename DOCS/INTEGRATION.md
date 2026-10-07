@@ -160,6 +160,18 @@ print("last sequence number:", link.sequence)  # 3
 
 **Concept of operations (PBS Gateway, in development).** For routine health checks, use a standard loop. Set a short TTL so old health data doesn't clog the buffer if the link goes down.
 
+```
+from PBS_LINK import PBSLink
+import time
+
+link = PBSLink("/dev/ttyS0")
+
+while True:
+    # TTL=60s: If this packet sits in the buffer for >1 min, drop it.
+    link.send(2, "Battery: 98%", ttl=60)
+    time.sleep(10)
+```
+
 ```python
 # TTL=60s: if more than 1 min has passed since its Timestamp, the gateway drops it.
 link.send(2, "Battery: 98%", ttl=60)
@@ -380,6 +392,7 @@ Pale Blue Systems is building the PBS Gateway to these design targets.
 All data egressing the PBS Gateway is compliant with **BPv7 ([RFC 9171](https://www.rfc-editor.org/rfc/rfc9171))**; the design target is the CCSDS profile of BPv7, **CCSDS 734.2-P-1.1** (draft Recommended Standard), which LNIS V005 §3.1.2 cites as applicable document [AD19].
 
 * **Source EID:** `ipn:99.[Your_Rover_ID]`
+* **Dest EID:** `ipn:23.1` (Mission Control Earth)
 
 Each rover runs its own ION bundle protocol agent node, hosted by its PBS-FRU-01 module (section 2.1). The source EID is therefore an endpoint of the node whose bundle protocol agent creates the bundle, as RFC 9171 §5.2 requires.
 

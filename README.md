@@ -32,6 +32,10 @@ It allows any device—from a university rover to a commercial mining drill—to
 
 ## Context
 
+Pale Blue Systems publishes `pbs-link` in anticipation of a future space environment that includes multiple space agencies, commercial operators, scientific missions, and privately operated systems sharing off-Earth infrastructure.
+
+This SDK does not address a current operational failure. It exists to support early experimentation, integration, and interoperability using an open, inspectable envelope standard—before future connectivity assumptions and conventions become fixed.
+
 The Pale Blue Systems Foundation publishes PBS_LINK for planned architectures in which space agencies, commercial operators, science missions and private systems share off-Earth communication infrastructure. No current operational failure motivates it. It provides a published envelope implementation for experimentation, integration and interoperability testing before connectivity conventions are fixed. [WHY-NOW.md](WHY-NOW.md) gives the rationale for publishing now.
 
 ---
