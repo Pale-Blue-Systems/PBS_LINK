@@ -2,11 +2,23 @@
 
 PBS_LINK is the Python reference SDK for the PBS-ENV-01 v1.5 message envelope. The envelope is a fixed, binary, transport-agnostic container: a 44-byte header that identifies the source and carries priority, timestamp, lifetime (TTL), sequence number and a header CRC-32, followed by the payload (PBS-ENV-01 §1, §2, §4).
 
+PBS_LINK exists to explore **how independent systems can exchange data predictably across disrupted, delayed, or heterogeneous networks** in future space environments.
+
 No current networking failure drives this work. The motivation is the number and diversity of communication paths in planned space architectures.
 
 ---
 
-## The Connectivity Model
+## The Emerging Connectivity Model
+
+Future space networks are expected to include:
+
+- planetary surface networks,
+- cislunar relays,
+- deep-space links,
+- intermittent commercial and governmental infrastructure,
+- dynamically changing topologies.
+
+In this environment, **continuous connectivity cannot be assumed**, and network boundaries will often cross organizational lines.
 
 The [LunaNet Interoperability Specification, Version 5](https://www.nasa.gov/wp-content/uploads/2025/02/lunanet-interoperability-specification-v5-baseline.pdf) (LNIS V005, Baseline, 29 January 2025), written and approved by NASA, ESA and JAXA, envisions LunaNet as "a network of cooperating networks" (§1). In that architecture:
 
@@ -16,6 +28,31 @@ The [LunaNet Interoperability Specification, Version 5](https://www.nasa.gov/wp-
 - DTN network services use Bundle Protocol version 7 (§3.1.2).
 
 Continuous end-to-end connectivity is therefore not assumed, and network paths cross organizational boundaries.
+
+---
+
+## The Architectural Challenge
+
+As connectivity becomes more fragmented:
+
+- assumptions about latency, availability, and control diverge,
+- tightly coupled systems become brittle,
+- link behavior becomes an implicit policy decision rather than an explicit design choice.
+
+Without clear abstraction between applications and network services (PBS-LNIS-01 §2), complexity migrates upward into applications and operations.
+
+---
+
+## Why Link Semantics Need Early Attention
+
+Explicit link semantics allow systems to:
+
+- reason about disruption and delay,
+- remain robust across variable transport conditions,
+- decouple application logic from connectivity assumptions,
+- interoperate across independently managed infrastructure.
+
+Exploring these ideas early reduces the risk of brittle coupling later.
 
 ---
 
@@ -29,6 +66,12 @@ PBS_LINK builds and parses envelopes, writes them to a local serial port and rea
 
 ## Purpose of Publishing Now
 
+This repository exists to:
+
+1. Clarify link-level assumptions before they are encoded into higher layers.
+2. Support experimentation with disruption-tolerant connectivity models.
+3. Enable collaboration across organizations facing similar future constraints.
+
 PBS_LINK publishes an implementation of the envelope so that independent implementations can test against it. The repository provides:
 
 1. Envelope construction and parsing in `PBS_LINK/core.py`: source identity, priority, timestamp, TTL, sequence number and header CRC-32.
@@ -40,3 +83,7 @@ PBS_LINK publishes an implementation of the envelope so that independent impleme
 ## Summary
 
 Planned lunar networks are heterogeneous, intermittent and shared by independent operators (LNIS V005 §1, §3.1). PBS-ENV-01 envelopes are application protocol data carried over the IP or BPv7 network services of those networks (PBS-LNIS-01 §2). PBS_LINK publishes an implementation of the envelope (source identity, priority, timestamp, TTL, sequence number, header CRC-32) so that independent implementations can test against it.
+
+PBS_LINK is published now because future space networks will be **heterogeneous, intermittent, and shared**.
+
+Addressing link behavior early helps ensure that higher-level systems remain adaptable as the space communication environment evolves.
